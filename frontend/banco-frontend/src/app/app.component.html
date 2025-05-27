@@ -1,0 +1,16 @@
+<h2>Registrar Cliente</h2>
+<form [formGroup]="formulario" (ngSubmit)="enviar()">
+  <input formControlName="nombre" placeholder="Nombre">
+  <input formControlName="email" placeholder="Email">
+  <input formControlName="telefono" placeholder="Teléfono">
+  <input formControlName="direccion" placeholder="Dirección">
+  <button type="submit">Guardar</button>
+</form>
+
+<h3>Clientes</h3>
+<ul>
+  <li *ngFor="let cliente of clientes">
+    {{ cliente.nombre }} - {{ cliente.email }}
+    <button (click)="eliminarCliente(cliente.id)">Eliminar</button>
+  </li>
+</ul>
