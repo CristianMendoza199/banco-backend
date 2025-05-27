@@ -1,3 +1,28 @@
+
+const express = require('express');
+const cors = require('cors');
+require('dotenv').config();
+
+const app = express();
+
+// Middlewares
+app.use(cors());
+app.use(express.json());
+
+// Rutas
+const clienteRoutes = require('./routes/clienteRoutes');
+app.use('/api/clientes', clienteRoutes);
+
+// Puerto
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+});
+
+
+
+
+/*
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
@@ -38,3 +63,5 @@ app.listen(PORT, () => {
 
 const clienteRoutes = require('./routes/clienteRoutes');
 app.use('/api/clientes', clienteRoutes);
+
+*/
