@@ -1,0 +1,14 @@
+# Node modules
+node_modules/
+**/node_modules/
+
+# Env files
+.env
+
+# Angular build
+/dist
+/.angular
+frontend/banco-frontend/.angular/
+
+# Logs
+npm-debug.log
