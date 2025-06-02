@@ -13,6 +13,9 @@ app.use(express.json());
 const clienteRoutes = require('./routes/clienteRoutes');
 app.use('/api/clientes', clienteRoutes);
 
+const creditoRoutes = require('./routes/creditoRoutes');
+app.use('/api/creditos', creditoRoutes);
+
 // Puerto
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
