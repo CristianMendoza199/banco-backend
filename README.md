@@ -1,16 +1,49 @@
-# Banco Proyecto
 
-CRUD funcional de clientes usando Angular, Node.js y procedimientos almacenados en base de datos PostgreSQL/MySQL.
+## 🚀 Tecnologías utilizadas
 
-## Tecnologías
+- Node.js
+- Express
+- PostgreSQL
+- pg (driver para PostgreSQL)
+- dotenv
+- cors
 
-- Angular
-- Node.js + Express
-- PostgreSQL (SP)
-- Bootstrap (opcional)
+---
 
-## Cómo correrlo
+## ✅ Funcionalidades actuales
 
-1. Cloná el repositorio:
-   ```bash
-   git clone https://github.com/CristianMendoza199/banco-proyecto.git
+### 🔹 Clientes
+- `GET /api/clientes` → Obtener todos los clientes  
+- `POST /api/clientes/crear` → Crear nuevo cliente  
+- `PUT /api/clientes/actualizar/:id` → Actualizar cliente  
+- `DELETE /api/clientes/borrar/:id` → Eliminar cliente  
+
+### 🔹 Créditos
+- `POST /api/creditos/crear` → Asignar crédito (con SP)
+
+---
+
+## 🧠 Arquitectura lógica
+
+- Se utiliza una arquitectura **MVC simplificada**:  
+  - Controladores para lógica de negocio  
+  - Modelos para conexión con base de datos (con SP)
+  - Rutas organizadas por módulo
+
+- Se prioriza el uso de **objetos como parámetros** en los modelos, para claridad y escalabilidad.
+
+---
+
+## 🧪 Cómo correr el backend
+
+```bash
+# 1. Clonar el repositorio
+git clone https://github.com/usuario/banco-backend.git
+
+# 2. Instalar dependencias
+npm install
+
+# 3. Crear archivo .env basado en .env.example
+
+# 4. Iniciar el servidor
+node src/app.js
