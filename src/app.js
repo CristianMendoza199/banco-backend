@@ -19,6 +19,12 @@ app.use('/api/creditos', creditoRoutes);
 const cuentaRoutes = require('./routes/cuentaRoutes');
 app.use('/api/cuentas', cuentaRoutes);
 
+const TransaccionRoutes = require('./routes/transaccionRoutes');
+app.use('/api/transacciones', TransaccionRoutes);
+
+const registrar_usuario =  require('./routes/authRoutes');
+app.use('/api/auth', require('./routes/authRoutes'));
+
 // Puerto
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
