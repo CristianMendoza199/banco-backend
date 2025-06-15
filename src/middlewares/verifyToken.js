@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secreto_bancario_123';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 function verifyToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -28,4 +28,17 @@ function verifyToken(req, res, next) {
   }
 }
 
-module.exports = verifyToken;
+function verifyRole(...rolesPermitidos){
+    return(req, res, next) => {
+        const rol = req.user?.rol;
+        if(!rolesPermitidos.includes(rol)){
+            return res.status(403).json({status_desc: 'Acceso denegado: rol insuficiente'});
+        }
+        next();
+    }
+}
+
+module.exports = {
+    verifyToken, 
+    verifyRole
+};

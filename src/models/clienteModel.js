@@ -37,32 +37,3 @@ module.exports = {
 };
 
 
-/*
-const pool = require('../config/db');
-
-exports.obtenerTodos = () => {
-  return pool.query('SELECT * FROM clientes');
-};
-
-exports.insertarCliente = (nombre, email, telefono, direccion) => {
-  return pool.query(
-    'INSERT INTO clientes (nombre, email, telefono, direccion) VALUES ($1, $2, $3, $4) RETURNING *',
-    [nombre, email, telefono, direccion]
-  );
-}; 
-
-// SP para editar cliente
-exports.editarCliente = async ({ id, nombre, email, telefono, direccion }) => {
-  const query = `
-    SELECT * FROM editar_cliente($1, $2, $3, $4, $5);
-  `;
-  const values = [id, nombre, email, telefono, direccion];
-  return await pool.query(query, values);
-};
-
-// SP para eliminar cliente
-exports.eliminarCliente = async (id) => {
-  const query = `SELECT * FROM eliminar_cliente($1);`;
-  return await pool.query(query, [id]);
-};
-*/

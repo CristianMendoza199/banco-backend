@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const model = require('../models/authModel');
 
-const JWT_SECRET = 'secreto_bancario_123'; // 🔒 Usá env en producción
+const JWT_SECRET = process.env.JWT_SECRET; // 🔒 Usá env en producción
 
 // POST /auth/register
 exports.registrar = async (req, res) => {
@@ -45,7 +45,12 @@ exports.login = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: usuario.id, email: usuario.email, rol: usuario.rol },
+      { 
+        id: usuario.id,
+        email: usuario.email,
+        rol: usuario.rol,
+        cliente_id: usuario.cliente_id
+           },
       JWT_SECRET,
       { expiresIn: '2h' }
     );
@@ -63,4 +68,5 @@ exports.login = async (req, res) => {
       error: error.message
     });
   }
+
 };
