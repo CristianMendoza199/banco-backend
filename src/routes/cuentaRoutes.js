@@ -1,8 +1,26 @@
 const express = require('express');
 const router = express.Router();
 
-const { crearCuenta } = require('../controllers/cuentaController');
+const { verifyToken } = require('../middlewares/verifyToken');
+const { allowRoles } = require('../middlewares/roles');
 
-router.post('/crear', crearCuenta);
+const {
+     crearCuenta,
+     obtenerMisCuentas,
+     obtenerTodas,
+     eliminarCuenta
+
+ } = require('../controllers/cuentaController');
+
+ // Cliente puede ver sus propias cuentas
+router.get('/mis-cuentas', verifyToken, allowRoles('cliente'), obtenerMisCuentas);
+
+
+// admin, puede crear y ver todas!!
+router.post('/crear',verifyToken, allowRoles('admin'),crearCuenta);
+router.get('/todas', verifyToken, allowRoles('admin'),obtenerTodas);
+router.delete('/eliminar/:id', verifyToken, allowRoles('admin'),eliminarCuenta)
+
+
 
 module.exports = router;

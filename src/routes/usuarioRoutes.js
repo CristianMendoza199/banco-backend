@@ -1,6 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { login, register, getAllUsers } = require('../controllers/usuarioController');
+const {
+     login,
+     register,
+      getAllUsers
+      
+} = require('../controllers/usuarioController');
+
 const { verifyToken } = require('../middlewares/verifyToken');
 const { allowRoles } = require('../middlewares/roles');
 

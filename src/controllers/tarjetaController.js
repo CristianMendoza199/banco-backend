@@ -1,3 +1,4 @@
+const pool = require('../config/db');
 const model = require('../models/tarjetaModel');
 
 exports.crearTarjeta = async (req, res) => {
@@ -56,4 +57,43 @@ exports.crearTarjeta = async (req, res) => {
       error: error.message
     });
   }
+};
+
+exports.bloquearTarjeta = async(req, res)  => {
+  try{
+    const { id } = req.params;
+    await model.bloquearTarjeta(id);
+    res.status(200).json({status_desc: 'Tarjeta bloqueada'});
+  }catch(error){
+    res.status(500).json({status_desc: 'Error al bloquear la tajeta', error: error.message});
+  }
+};
+
+exports.activarTarjeta = async(req, res) => {
+  try{
+    const { id } = req.params;
+    await model.activarTarjeta(id);
+    res.status(200).json({status_desc: 'Tarjeta activada'});
+  } catch(error){
+    res.status(500).json({status_desc: 'Error al activar la tarjeta', error: error.message});
+  }
+};
+
+exports.eliminarTarjeta = async(req, res) => {
+  try{
+    const { id } = req.params;
+    await model.eliminarTarjeta(id);
+    res.status(200).json({status_desc: 'Tarjeta eliminada'});
+  }catch(error){
+    res.status(500).json({status_desc: 'Error al eliminar la tarjeta', error: error.message});
+  }
+};
+
+exports.obtenerTodas = async(req, res) => {
+    try{
+      const  result = await model.obtenerTodasTarjetas();
+      res.status(200).json({tarjetas: result.rows});
+    } catch(error){
+      res.status(500).json({status_desc: 'Error al cargar las tarjetas', error: error.message});
+    }
 };

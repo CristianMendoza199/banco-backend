@@ -17,6 +17,8 @@ async function obtenerTodosLosUsuarios() {
   return result.rows;
 }
 
+
+
 module.exports = {
   obtenerUsuarioPorEmail,
   registrarUsuario,

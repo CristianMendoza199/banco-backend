@@ -10,7 +10,7 @@ async function crearTarjeta({ cuenta_id, tipo, limite_credito = 0 }) {
 async function obtenerTarjetasPorCliente(cliente_id) {
   const query = `
     SELECT t.*, tc.limite_credito
-    FROM tarjetas t
+    FROM tarjeta t
     LEFT JOIN tarjeta_credito tc ON t.id = tc.tarjeta_id
     INNER JOIN cuentas c ON t.cuenta_id = c.id
     WHERE c.cliente_id = $1
@@ -18,7 +18,27 @@ async function obtenerTarjetasPorCliente(cliente_id) {
   return await pool.query(query, [cliente_id]);
 }
 
+async function bloquearTarjeta(id) {
+    return await pool.query('UPDATE tarjeta  SET estado = $1 WHERE id = $2', ['bloqueada', id]);
+}
+
+async function activarTarjeta(id) {
+    return await pool.query('UPDATE tarjeta SET estado  = $1 WHERE id = $2',['activa',id]);
+}
+
+async function eliminarTarjeta(id) {
+    return await pool.query('DELETE FROM tarjeta WHERE id = $1'[id]);
+}
+
+async function obtenerTodasTarjetas() {
+    return await pool.query('SELECT FROM tarjeta');
+}
+
 module.exports = {
   crearTarjeta,
-  obtenerTarjetasPorCliente
+  obtenerTarjetasPorCliente,
+  bloquearTarjeta,
+  activarTarjeta,
+  eliminarTarjeta, 
+  obtenerTodasTarjetas
 };

@@ -1,13 +1,32 @@
 const express = require('express');
 const router = express.Router();
-const { crearTarjeta, obtenerTarjetasPorCliente } = require('../controllers/tarjetaController');
-const { verifyToken, verifyRole } = require('../middlewares/verifyToken');
+const {
+    crearTarjeta,
+    obtenerTarjetasPorCliente, 
+    obtenerTodas,
+    eliminarTarjeta,
+    activarTarjeta,
+    bloquearTarjeta
+    
+} = require('../controllers/tarjetaController');
+
+const { verifyToken } = require('../middlewares/verifyToken');
+const { allowRoles } = require('../middlewares/roles');
+
+//cliente puede ver sus tarjetas
+router.get('/mis-tarjetas', verifyToken, allowRoles('cliente'),obtenerTarjetasPorCliente);
+
 
 // Solo admin puede crear tarjetas (por ahora)
-router.get('/test', (req, res) => res.send('Ruta de prueba OK'));
-router.post('/crear', verifyToken, verifyRole('admin', 'cliente'), crearTarjeta);
-router.get('/por-cliente', verifyToken, verifyRole('cliente', 'admin'),
-obtenerTarjetasPorCliente);
+router.post('/crear', verifyToken, allowRoles('admin'),crearTarjeta);
+router.get('/todas', verifyToken, allowRoles( 'admin'),obtenerTodas);
+router.delete('/eliminar/:id', verifyToken, allowRoles('admin'),eliminarTarjeta);
+
+
+//activar o bloquear tarjetas
+router.put('/bloquear/:id', verifyToken, allowRoles('admin','cliente'), bloquearTarjeta);
+router.put('/activar/:id', verifyToken, allowRoles('admin','cliente'), activarTarjeta);
+
 
 module.exports = router;
 

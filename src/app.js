@@ -26,7 +26,7 @@ const registrar_usuario =  require('./routes/authRoutes');
 app.use('/api/auth', require('./routes/authRoutes'));
 
 const tarjetaRoutes = require('./routes/tarjetaRoutes');
-app.use('/api/tarjetas', tarjetaRoutes);
+app.use('/api/tarjeta', tarjetaRoutes);
 
 const adminRoutes = require('./routes/adminRoutes');
 app.use('/api/admin', adminRoutes);
