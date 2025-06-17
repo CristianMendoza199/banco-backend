@@ -34,6 +34,8 @@ app.use('/api/admin', adminRoutes);
 const usuarioRoutes = require('./routes/usuarioRoutes');
 app.use('/api/usuarios', usuarioRoutes);
 
+const transferenciaRoutes = require('./routes/transferenciaRoutes');
+app.use('/api/cliente', transferenciaRoutes);
 // Puerto
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
