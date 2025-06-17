@@ -1,3 +1,4 @@
+const pool = require('../config/db');
 const model = require('../models/transaccionModel');
 
 exports.registrarTransaccion = async (req, res) => {
@@ -19,5 +20,26 @@ exports.registrarTransaccion = async (req, res) => {
       error: error.message
     });
   }
+};
+
+
+exports.getHistorialConFiltros = async(req, res) => { 
+    try{
+      const cliente_id = req.user.cliente_id;
+      const filtros = req.query;
+      
+      const transacciones =  await model.obtenerTransaccionesFiltradas(cliente_id, filtros);
+
+      res.status(200).json({
+        status_code: 200,
+        transacciones
+      }); 
+    }catch (error) {
+      res.status(500).json({
+        status_code: 500,
+        status_desc: ' error al obtener el historial',
+        error: error.message
+      });
+    }
 };
     
