@@ -10,13 +10,15 @@ const { allowRoles } =  require('../middlewares/roles');
 // importamos el controlador que maneja la logica del crédito
 const {
      registrarTransaccion, 
-     getHistorialConFiltros
+     getHistorialConFiltros,
+     getEstadoCuentaPdf
 
  } = require('../controllers/transaccionController');
 
 
 router.post('/transaccion', verifyToken, allowRoles('cliente'), registrarTransaccion);
 router.get('/transacciones', verifyToken, allowRoles('cliente'), getHistorialConFiltros);
+router.get('/estado-cuenta/pdf', verifyToken, allowRoles('cliente'), getEstadoCuentaPdf);
 
 // Exportamos el router para conectarlo en app.js
 module.exports = router;

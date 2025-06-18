@@ -97,3 +97,50 @@ exports.obtenerTodas = async(req, res) => {
       res.status(500).json({status_desc: 'Error al cargar las tarjetas', error: error.message});
     }
 };
+
+
+exports.reportarTarjeta =  async(req, res) => {
+  try {
+    const cliente_id = req.user.cliente_id;
+    const { tarjeta_id, motivo } = req.body;
+
+
+    const { rows } = await pool.query(
+      'SELECT * FROM tarjeta WHERE id = $1 AND cuenta_id IN (SELECT id FROM cuentas WHERE cliente_id = $2)',
+      [tarjeta_id, cliente_id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(403).json({
+        status_code: 403,
+        status_desc: 'No tienes permiso para reportar esta tarjeta'
+      });
+    }
+
+    const tarjeta = rows[0];
+
+    if (tarjeta.estado === 'Reportada') {
+          return res.status(409).json({
+        status_code: 409,
+          status_desc: 'La tarjeta ya fue reportada previamente'
+        });
+    }
+
+    await model.reportarTarjeta(tarjeta_id, motivo);
+
+      
+
+    res.status(200).json({
+      status_code: 200,
+      status_desc: 'tarjeta reportada correctamente'
+    });
+
+  } catch (error){
+    res.status(500).json({
+      status_code: 500,
+      status_desc: 'Error al reportar la tarjeta',
+      error: error.message
+    });
+  }
+
+}

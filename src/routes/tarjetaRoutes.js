@@ -6,7 +6,8 @@ const {
     obtenerTodas,
     eliminarTarjeta,
     activarTarjeta,
-    bloquearTarjeta
+    bloquearTarjeta, 
+    reportarTarjeta
     
 } = require('../controllers/tarjetaController');
 
@@ -26,6 +27,9 @@ router.delete('/eliminar/:id', verifyToken, allowRoles('admin'),eliminarTarjeta)
 //activar o bloquear tarjetas
 router.put('/bloquear/:id', verifyToken, allowRoles('admin','cliente'), bloquearTarjeta);
 router.put('/activar/:id', verifyToken, allowRoles('admin','cliente'), activarTarjeta);
+
+//reportar
+router.post('/reportar', verifyToken, allowRoles('cliente'), reportarTarjeta);
 
 
 module.exports = router;

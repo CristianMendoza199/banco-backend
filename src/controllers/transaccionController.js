@@ -1,5 +1,7 @@
+const { page } = require('pdfkit');
 const pool = require('../config/db');
 const model = require('../models/transaccionModel');
+const { generarEstadoCuentaPdf } = require('../utils/pdfService');
 
 exports.registrarTransaccion = async (req, res) => {
     try {
@@ -42,4 +44,36 @@ exports.getHistorialConFiltros = async(req, res) => {
       });
     }
 };
-    
+
+
+exports.getEstadoCuentaPdf = async (req, res) => {
+  try{
+    const cliente_id = req.user.cliente_id;
+    const {cuenta_id, fecha_inicio, fecha_fin} = req.query;
+
+   const transacciones = await model.obtenerTransaccionesFiltradas(cliente_id, {
+      cuenta_id,
+      fecha_inicio,
+      fecha_fin,
+      page: 1,
+      limit: 1000
+    });
+
+    const cliente = {
+      nombre:  req.user.nombre || 'No registrado',
+      email: req.user.email
+    };
+
+    const periodo = {cuenta_id, fecha_inicio, fecha_fin};
+    const pdf = generarEstadoCuentaPdf(cliente, transacciones, periodo);
+
+    res.setHeader('Content-Disposition', 'attachment; filename=estado_cuenta.pdf' );
+    res.setHeader('Content-type', 'application/pdf');
+    pdf.pipe(res);
+  } catch (error) {
+      res.status(500).json({
+        res_status_code: 500,
+        res_status_desc: 'Error al generar PDF', error:  error.message
+      });
+  }
+};

@@ -34,11 +34,15 @@ async function obtenerTodasTarjetas() {
     return await pool.query('SELECT FROM tarjeta');
 }
 
+async function reportarTarjeta(tarjeta_id, motivo) {
+  return await pool.query('SELECT reportar_tarjeta($1, $2)', [tarjeta_id, motivo]);
+}
 module.exports = {
   crearTarjeta,
   obtenerTarjetasPorCliente,
   bloquearTarjeta,
   activarTarjeta,
   eliminarTarjeta, 
-  obtenerTodasTarjetas
+  obtenerTodasTarjetas, 
+  reportarTarjeta
 };
