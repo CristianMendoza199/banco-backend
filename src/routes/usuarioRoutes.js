@@ -3,7 +3,8 @@ const router = express.Router();
 const {
      login,
      register,
-      getAllUsers
+      getAllUsers,
+      changePassword
       
 } = require('../controllers/usuarioController');
 
@@ -15,5 +16,7 @@ router.post('/register', register);
 
 // Solo admin puede ver todos los usuarios
 router.get('/', verifyToken, allowRoles('admin'), getAllUsers);
+
+router.put('/cambiar-password', verifyToken, allowRoles('cliente'), changePassword);
 
 module.exports = router;
