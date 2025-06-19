@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const model = require('../models/tarjetaModel');
+const { registrarLog } = ('../service/logService');
 
 exports.crearTarjeta = async (req, res) => {
   try {
@@ -128,7 +129,13 @@ exports.reportarTarjeta =  async(req, res) => {
 
     await model.reportarTarjeta(tarjeta_id, motivo);
 
-      
+      await registrarLog({
+        usuario_id: req.user.id,
+        accion: 'REPORTAR_TARJETA',
+        descripcion: `Tarjeta ${tarjeta_id} reportada como: ${motivo}`,
+        ip: req.ip,
+        user_agent: req.headers['user-agent']
+      });
 
     res.status(200).json({
       status_code: 200,

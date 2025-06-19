@@ -5,6 +5,15 @@ const model = require('../models/creditoModel');
 exports.crearCredito = async (req, res) => {
   try {
     const result = await model.asignarCredito(req.body); // req.body tiene: cliente_id, monto, tasa_interes
+
+    await registrarLog({
+        usuario_id: req.user.id,
+        accion: 'CREAR_CREDITO',
+        descripcion: `Crédito asignado al cliente ID ${cliente_id}, monto: ${monto_total}, interés: ${tasa_interes}%`,
+        ip: req.ip,
+        user_agent: req.headers['user-agent']
+    });
+    
     res.status(201).json({
       status_code: 201,
       status_desc: 'Crédito asignado correctamente',
@@ -21,27 +30,23 @@ exports.crearCredito = async (req, res) => {
   }
 };
 
-
-/*
-// Importamos el modelo que contiene la función para ejecutar la SP
-
-const model = require('../models/creditoModel');
-
-// Controlador para la ruta POST /api/creditos/crear
-exports.crearCredito = async (req, res) => {
-  const { cliente_id, monto, tasa_interes, estado } = req.body; // Extraemos los datos del cuerpo de la solicitud
-
+exports.getMisCreditos = async (req, res) => {
   try {
-    await model.asignarCredito(cliente_id, monto, tasa_interes, estado); // Llamamos al modelo para asignar el crédito usando la SP
-    res.status(201).json({
-         status_code: 201,
-         status_desc: 'Crédito asignado correctamente' }); // Respondemos al cliente con un mensaje de éxito
-         
-  } catch (error) { // Si ocurre un error, lo mostramos en consola y respondemos con estado 500
-    console.error('Error al asignar crédito:', error);
+    const cliente_id = req.user.cliente_id;
+
+    const creditos = await model.obtenerCreditosPorCliente(cliente_id);
+
+    res.status(200).json({
+      status_code: 200,
+      creditos
+    });
+  } catch (error) {
     res.status(500).json({
-         status_code: 500,
-          status_desc: 'Error al asignar crédito' });
+      status_code: 500,
+      status_desc: 'Error al obtener créditos',
+      error: error.message
+    });
   }
 };
-*/
+
+

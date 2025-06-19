@@ -55,6 +55,14 @@ exports.login = async (req, res) => {
       { expiresIn: '2h' }
     );
 
+      await registrarLog({
+        usuario_id: usuario.id,
+        accion: 'LOGIN_EXITOSO',
+        descripcion: `Inicio de sesión correcto para usuario: ${usuario.email}`,
+        ip: req.ip,
+        user_agent: req.headers['user-agent']
+    });
+
     res.status(200).json({
       status_code: 200,
       status_desc: 'Login exitoso',
