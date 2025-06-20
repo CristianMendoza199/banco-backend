@@ -23,14 +23,11 @@ async function getUsuarioPorId(id) {
   return result.rows[0];
 }
 
-async function actualizarpassword(id, nuevaPasswordHasheada) {
-  await pool.query('UPDATE users SET password = $1 WHERE id = $2', [nuevaPasswordHasheada, id])
-}
+
 
 module.exports = {
   obtenerUsuarioPorEmail,
   registrarUsuario,
   obtenerTodosLosUsuarios,
   getUsuarioPorId,
-  actualizarpassword
 };
