@@ -1,6 +1,6 @@
 const pool = require('../config/db');
 const model = require('../models/tarjetaModel');
-const { registrarLog } = ('../service/logService');
+const { registrarLog } = ('../services/logService');
 
 exports.crearTarjeta = async (req, res) => {
   try {

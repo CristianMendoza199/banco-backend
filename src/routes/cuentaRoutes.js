@@ -13,7 +13,7 @@ const {
  } = require('../controllers/cuentaController');
 
  // Cliente puede ver sus propias cuentas
-router.get('/mis-cuentas', verifyToken, allowRoles('cliente'), obtenerMisCuentas);
+router.get('/mis-cuentas', verifyToken, allowRoles('cliente','admin'), obtenerMisCuentas);
 
 
 // admin, puede crear y ver todas!!

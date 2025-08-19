@@ -9,6 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+
 // Rutas
 const clienteRoutes = require('./routes/clienteRoutes');
 app.use('/api/clientes', clienteRoutes);
@@ -22,8 +23,6 @@ app.use('/api/cuentas', cuentaRoutes);
 const TransaccionRoutes = require('./routes/transaccionRoutes');
 app.use('/api/transacciones', TransaccionRoutes);
 
-const registrar_usuario =  require('./routes/authRoutes');
-app.use('/api/auth', require('./routes/authRoutes'));
 
 const tarjetaRoutes = require('./routes/tarjetaRoutes');
 app.use('/api/tarjeta', tarjetaRoutes);
@@ -36,6 +35,9 @@ app.use('/api/usuarios', usuarioRoutes);
 
 const transferenciaRoutes = require('./routes/transferenciaRoutes');
 app.use('/api/cliente', transferenciaRoutes);
+
+const ticketRoutes = require('./routes/ticketRoutes');
+app.use('/api/tickets', ticketRoutes);
 
 
 // Puerto

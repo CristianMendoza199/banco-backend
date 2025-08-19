@@ -4,7 +4,7 @@ const controller = require('../controllers/authController');
 const { solicitarRecuperacion } = require('../controllers/authController');
 
 // POST /api/auth/register
-router.post('/register', controller.registrar);
+router.post('/register', controller.register);
 
 // POST /api/auth/login
 router.post('/login', controller.login);
