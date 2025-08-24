@@ -4,9 +4,11 @@ const { verifyToken } = require('../middlewares/verifyToken');
 const { allowRoles } =  require('../middlewares/roles');
 
 const {
-    realizarTransferencia
+    transferir
 } = require('../controllers/transferenciaController');
 
-router.post('/transferir',verifyToken, allowRoles('cliente'), realizarTransferencia);
+router.post('/transferir',verifyToken, allowRoles('cliente'), transferir);
+router.post('/transferir', transferir);
+
 
 module.exports =  router;

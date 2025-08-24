@@ -13,7 +13,7 @@ const {
   eliminarCliente
 } = require('../controllers/clienteController');
 
-//router.use(verifyToken, allowRoles('cliente'));
+router.use(verifyToken, allowRoles('cliente'));
 
 //router.get('/mis-tarjetas', obtenerTarjetasPorCliente);
 //router.post('/transaccion',registrarTransaccion);

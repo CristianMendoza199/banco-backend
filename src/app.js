@@ -23,7 +23,6 @@ app.use('/api/cuentas', cuentaRoutes);
 const TransaccionRoutes = require('./routes/transaccionRoutes');
 app.use('/api/transacciones', TransaccionRoutes);
 
-
 const tarjetaRoutes = require('./routes/tarjetaRoutes');
 app.use('/api/tarjeta', tarjetaRoutes);
 
@@ -34,10 +33,13 @@ const usuarioRoutes = require('./routes/usuarioRoutes');
 app.use('/api/usuarios', usuarioRoutes);
 
 const transferenciaRoutes = require('./routes/transferenciaRoutes');
-app.use('/api/cliente', transferenciaRoutes);
+app.use('/api/transferencia', transferenciaRoutes);
 
 const ticketRoutes = require('./routes/ticketRoutes');
 app.use('/api/tickets', ticketRoutes);
+
+const authRoutes = require('./routes/authRoutes');
+app.use('/api/auth', authRoutes);  
 
 
 // Puerto

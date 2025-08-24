@@ -1,13 +1,12 @@
 const pool = require('../config/db');
 
 
-async function TranferirMonto({cuenta_origen, cuenta_destino, monto}) {
-    return await pool.query(
-        'SELECT transferir_monto($1, $2, $3)',
-        [cuenta_origen, cuenta_destino, monto]
-    )
+async function realizarTransferencia({ cuenta_origen, cuenta_destino, monto }) {
+ 
+return await pool.query(
+    "SELECT realizar_transferencia($1, $2, $3)",
+    [cuenta_origen, cuenta_destino, monto]
+  );
 }
 
-module.exports = {
-    TranferirMonto
-}
+module.exports = { realizarTransferencia };

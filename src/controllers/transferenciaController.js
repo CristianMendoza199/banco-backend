@@ -1,20 +1,33 @@
-const model = require('../models/transferenciaModel');
+const transferenciaModel = require('../models/transferenciaModel');
 
-exports.realizarTransferencia = async(req, res) => {
-    try {
-        const { cuenta_origen, cuenta_destino, monto } = req.body;
-        const cliente_id = req.user.cliente_id;
 
-        await model.TranferirMonto({cuenta_origen, cuenta_destino, monto});
+exports.transferir = async (req, res) => {
+  try {
+    const { cuenta_origen, cuenta_destino, monto } = req.body;
 
-        res.status(200).json({
-            status_code: 200,
-            status_desc: 'transferencia exitosa!'
-    });
-    }catch(error) {
-        res.status(500).json({
-            status_code: 500,
-            status_desc: 'error al realizar la transferencia', error: error.message
-        });
+    if (!cuenta_origen || !cuenta_destino || !monto) {
+      return res.status(400).json({
+        success: false,
+        message: 'Todos los campos son obligatorios',
+      });
     }
+
+    const result = await transferenciaModel.realizarTransferencia({
+      cuenta_origen,
+      cuenta_destino,
+      monto,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  } catch (error) {
+    console.error('Error en transferencia:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Error al realizar la transferencia',
+      error: error.message,
+    });
+  }
 };
