@@ -41,6 +41,9 @@ app.use('/api/tickets', ticketRoutes);
 const authRoutes = require('./routes/authRoutes');
 app.use('/api/auth', authRoutes);  
 
+const solicitudCreditoRoutes = require('./routes/solicitudCreditoRoutes');
+app.use('/api/solicitudescredito', solicitudCreditoRoutes);
+
 
 // Puerto
 const PORT = process.env.PORT || 3001;
