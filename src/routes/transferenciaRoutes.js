@@ -8,7 +8,7 @@ const {
 } = require('../controllers/transferenciaController');
 
 router.post('/transferir',verifyToken, allowRoles('cliente'), transferir);
-router.post('/transferir', transferir);
+
 
 
 module.exports =  router;

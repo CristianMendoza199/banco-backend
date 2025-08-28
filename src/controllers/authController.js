@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const model = require('../models/usuarioModel');
 const logService = require('../services/logService');
 const { enviarCorreoRecuperacion } = require('../utils/emailService');
+const LogActions = require('../constants/logAction');
 const JWT_SECRET = process.env.JWT_SECRET; // 🔒 Usá env en producción
 const regexPasswordFuerte = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
 
@@ -30,9 +31,26 @@ exports.register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     await model.registrarUsuario({ email, password: hashedPassword, rol, cliente_id });
 
+    await logService.registrarLog({
+      usuario_id: usuario.id,
+      accion: LogActions.REGISTER_USER,
+      descripcion: `Usuario registrado correctamente con el correo ${usuario.email}`,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+
     res.status(201).json({ status_code: 201, status_desc: 'Usuario registrado correctamente' });
   } catch (error) {
     console.error('Error al registrar usuario:', error);
+
+    await logService.registrarLog({
+      usuario_id: null,
+      accion: LogActions.REGISTER_FAILED,
+      descripcion: `Error al registrar usuario: ${error.message}`,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+
     res.status(500).json({ status_desc: 'Error al registrar usuario', error: error.message });
   }
 };
@@ -56,6 +74,14 @@ exports.login = async (req, res) => {
 
     const validPassword = await bcrypt.compare(password, usuario.password);
     if (!validPassword) {
+      await logService.registrarLog({
+        usuario_id: usuario.id,
+        accion: LogActions.LOGIN_FALLIDO,
+        descripcion: `Intento fallido de login para usuario ID ${usuario.id}: contraseña incorrecta `,
+        ip: req.ip,
+        user_agent: req.headers['user-agent'],
+      });
+
       return res.status(401).json({
         success: false,
         status_code: 401,
@@ -73,6 +99,14 @@ exports.login = async (req, res) => {
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "4h" });
 
+    await logService.registrarLog({
+      usuario_id: usuario.id,
+      accion: LogActions.LOGIN_EXITOSO,
+      descripcion: `Usuario Id ${usuario.email}: inició sesión correctamente`,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+
     // ✅ respuesta con 200 OK explícito
     return res.status(200).json({
       success: true,
@@ -87,6 +121,15 @@ exports.login = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
+
+    await logService.registrarLog({
+      usuario_id: null,
+      accion: LogActions.LOGIN_ERROR,
+      descripcion: `Error inesperado en login: ${error.message}`,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+
     return res.status(500).json({
       success: false,
       status_code: 500,
@@ -142,20 +185,14 @@ exports.restablecerContraseña = async(req, res) => {
      const nuevaPasswordHasheada  = await bcrypt.hash(newPassword, 10);
      await model.actualizarPassword(usuario_id, nuevaPasswordHasheada);
 
-    console.log({
-      usuario_id,
-      accion: 'RESET_PASSWORD',
-      descripcion: `Restableció la contraseña desde enlace de recuperación`,
-    });
-      await logService.registrarLog({
-        usuario_id,
-        accion: 'RESET_PASSWORD',
+    await logService.registrarLog({
+        usuario_id: usuario.id,
+        accion: LogActions.PASSWORD_RESET,
         descripcion: `Restableció la contraseña desde enlace de recuperación`,
         ip: req.ip,
         user_agent: req.headers['user-agent'],
       });
       
-
      res.status(200).json({mensaje: 'Contraseña reestablecida éxitosamente'});
   } catch (error) {
     console.error(error);

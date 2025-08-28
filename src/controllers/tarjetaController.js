@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 const model = require('../models/tarjetaModel');
 const { registrarLog } = ('../services/logService');
+const LogActions = require('../constants/logAction');
 
 exports.crearTarjeta = async (req, res) => {
   try {
@@ -15,6 +16,15 @@ exports.crearTarjeta = async (req, res) => {
 
     await model.crearTarjeta({ cuenta_id, tipo, limite_credito });
 
+
+       await logService.registrarLog({
+      usuario_id: req.user.id,
+      accion: LogActions,
+      descripcion: `Crédito asignado al cliente ID ${cliente_id}, monto: ${monto_total}, numero de cuotas: ${numero_cuotas} , interés: ${tasa_interes}%`,
+      ip: req.ip,
+      user_agent: req.headers['user-agent']
+    });
+    
     res.status(201).json({
       status_code: 201,
       status_desc: 'Tarjeta creada correctamente'
@@ -64,6 +74,16 @@ exports.bloquearTarjeta = async(req, res)  => {
   try{
     const { id } = req.params;
     await model.bloquearTarjeta(id);
+
+        await registrarLog({
+        usuario_id: req.user.id,
+        accion: LogActions.BLOCK_CARD,
+        descripcion: `La Tarjeta ${tarjeta_id} ha sido bloqueada `,
+        ip: req.ip,
+        user_agent: req.headers['user-agent']
+      });
+
+
     res.status(200).json({status_desc: 'Tarjeta bloqueada'});
   }catch(error){
     res.status(500).json({status_desc: 'Error al bloquear la tajeta', error: error.message});
@@ -74,6 +94,15 @@ exports.activarTarjeta = async(req, res) => {
   try{
     const { id } = req.params;
     await model.activarTarjeta(id);
+
+        await registrarLog({
+        usuario_id: req.user.id,
+        accion: LogActions.UNBLOCK_CARD,
+        descripcion: `La Tarjeta ${tarjeta_id} ha sido desbloqueada`,
+        ip: req.ip,
+        user_agent: req.headers['user-agent']
+      });
+
     res.status(200).json({status_desc: 'Tarjeta activada'});
   } catch(error){
     res.status(500).json({status_desc: 'Error al activar la tarjeta', error: error.message});
@@ -84,6 +113,13 @@ exports.eliminarTarjeta = async(req, res) => {
   try{
     const { id } = req.params;
     await model.eliminarTarjeta(id);
+        await registrarLog({
+        usuario_id: req.user.id,
+        accion: LogActions.DELETE_CARD,
+        descripcion: `Tarjeta ${tarjeta_id}`,
+        ip: req.ip,
+        user_agent: req.headers['user-agent']
+      });
     res.status(200).json({status_desc: 'Tarjeta eliminada'});
   }catch(error){
     res.status(500).json({status_desc: 'Error al eliminar la tarjeta', error: error.message});
@@ -131,7 +167,7 @@ exports.reportarTarjeta =  async(req, res) => {
 
       await registrarLog({
         usuario_id: req.user.id,
-        accion: 'REPORTAR_TARJETA',
+        accion: LogActions.REPORT_CARD,
         descripcion: `Tarjeta ${tarjeta_id} reportada como: ${motivo}`,
         ip: req.ip,
         user_agent: req.headers['user-agent']

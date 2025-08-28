@@ -16,7 +16,7 @@ const {
  } = require('../controllers/transaccionController');
 
 
-router.post('/transaccion', verifyToken, allowRoles('cliente'), registrarTransaccion);
+router.post('/registrar', verifyToken, allowRoles('cliente'), registrarTransaccion);
 router.get('/transacciones', verifyToken, allowRoles('cliente'), getHistorialConFiltros);
 router.get('/estado-cuenta/pdf', verifyToken, allowRoles('cliente'), getEstadoCuentaPdf);
 

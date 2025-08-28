@@ -20,7 +20,7 @@ router.get('/mis-tarjetas', verifyToken, allowRoles('cliente'),obtenerTarjetasPo
 
 // Solo admin puede crear tarjetas (por ahora)
 router.post('/crear', verifyToken, allowRoles('admin'),crearTarjeta);
-router.get('/todas', verifyToken, allowRoles( 'admin'),obtenerTodas);
+router.get('/', verifyToken, allowRoles( 'admin'),obtenerTodas);
 router.delete('/eliminar/:id', verifyToken, allowRoles('admin'),eliminarTarjeta);
 
 

@@ -1,5 +1,6 @@
 const ticketModel = require('../models/ticketModel');
 const logService = require("../services/logService");
+const LogActions = require('../constants/logAction');
 
 // Crear ticket
 exports.crearTicket = async (req, res) => {
@@ -10,7 +11,7 @@ exports.crearTicket = async (req, res) => {
     
      await logService?.registrarLog?.({
       usuario_id: user_id,
-      accion: 'CREAR_TICKET',
+      accion: LogActions.CREATE_TICKET,
       descripcion: `Creó TICKET ${motivo}`,
       ip: req.ip,
       user_agent: req.headers['user-agent']
@@ -24,6 +25,15 @@ exports.crearTicket = async (req, res) => {
     });
   } catch (error) {
     console.error("error al crear el ticket:", error);
+
+       await logService?.registrarLog?.({
+      usuario_id: user_id,
+      accion: LogActions.TICKET_FAILED_CREATE,
+      descripcion: `error al crear el ticket ${error}`,
+      ip: req.ip,
+      user_agent: req.headers['user-agent']
+    });
+
     return res.status(500).json({
       success: false,
       status_code: 500,

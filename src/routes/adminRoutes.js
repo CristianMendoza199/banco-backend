@@ -10,9 +10,8 @@ const { getAllUsers } = require('../controllers/usuarioController');
 
 router.use(verifyToken, allowRoles('admin'));
 
-router.post('/crear-tarjeta', crearTarjeta);
-router.get('/usuarios', getAllUsers);
-//router.delete('/cuenta/:id',eliminarCuenta);
-console.log(getAllUsers);
+router.post('/crear-tarjeta',verifyToken, allowRoles('admin'), crearTarjeta);
+router.get('/usuarios', verifyToken, allowRoles('admin'), getAllUsers);
+
 
 module.exports = router;

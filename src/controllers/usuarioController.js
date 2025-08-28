@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const model = require('../models/usuarioModel');
 const logService = require('../services/logService');
+const LogActions = require('../constants/logAction');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -54,7 +55,7 @@ exports.createUsuario = async (req, res) => {
 
     await logService?.registrarLog?.({
       usuario_id: req.user?.id,
-      action: 'CREATE_USER',
+      action: LogActions.CREATE_USER,
       description: `Creó usuario ${email}`,
       ip: req.ip,
       user_agent: req.headers['user-agent']

@@ -1,5 +1,5 @@
 const model = require('../models/cuentaModel');
-
+const LogActions = require('../constants/logAction');
 
 // Crear cuenta (admin)
 exports.crearCuenta = async (req, res) =>{
@@ -10,12 +10,22 @@ exports.crearCuenta = async (req, res) =>{
       return res.status(400).json({ status_desc: 'Datos incompletos' });
     }
 
-     const result = await model.crearCuenta({ cliente_id, tipo_cuenta_id, saldo });
+     const cuenta = await model.crearCuenta({ cliente_id, tipo_cuenta_id, saldo });
+
+    await logService.registrarLog({
+      usuario_id: req.user.id,
+      accion: LogActions.CREATE_ACCOUNT,
+      descripcion: `Cuenta ID ${cuenta.id} creada para cliente ${cliente_id}, 
+              tipo: ${tipo_cuenta_id}, 
+              con un depósito inicial de: ${saldo}`,
+      ip: req.ip,
+      user_agent: req.headers['user-agent']
+    });
 
     res.status(201).json({
       status_code: 201,
       status_desc: 'Cuenta creada correctamente',
-      cuenta: result.rows[0]
+      cuenta: cuenta
     });
 
      } catch (error) {
@@ -28,7 +38,7 @@ exports.crearCuenta = async (req, res) =>{
 };
 
 // Ver cuentas del cliente logueado
-exports.obtenerMisCuentas = async (req, res) => {
+exports.obtenerCuentasPorCliente = async (req, res) => {
   try {
     const cliente_id = req.user.cliente_id;
 
@@ -47,7 +57,7 @@ exports.obtenerMisCuentas = async (req, res) => {
 };
 
 // Ver todas las cuentas (admin)
-exports.obtenerTodas = async (req, res) => {
+exports.obtenerTodasLasCuentas = async (req, res) => {
   try {
     const result = await model.obtenerTodasLasCuentas();
 

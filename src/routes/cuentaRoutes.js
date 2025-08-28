@@ -18,7 +18,7 @@ router.get('/mis-cuentas', verifyToken, allowRoles('cliente','admin'), obtenerMi
 
 // admin, puede crear y ver todas!!
 router.post('/crear',verifyToken, allowRoles('admin'),crearCuenta);
-router.get('/todas', verifyToken, allowRoles('admin'),obtenerTodas);
+router.get('/', verifyToken, allowRoles('admin'),obtenerTodas);
 router.delete('/eliminar/:id', verifyToken, allowRoles('admin'),eliminarCuenta)
 
 

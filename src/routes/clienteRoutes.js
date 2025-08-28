@@ -20,9 +20,9 @@ const {
 
 
 
-router.get('/', getClientes);
-router.post('/crear', crearCliente);
-router.put('/actualizar/:id', actualizarCliente);
-router.delete('/borrar/:id', eliminarCliente);
+router.get('/', verifyToken, allowRoles('admin'), getClientes);
+router.post('/crear', verifyToken, allowRoles('admin'), crearCliente);
+router.put('/actualizar/:id', verifyToken, allowRoles('admin'), actualizarCliente);
+router.delete('/borrar/:id', verifyToken, allowRoles('admin'), eliminarCliente);
 
 module.exports = router;

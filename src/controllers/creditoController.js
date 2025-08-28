@@ -1,6 +1,7 @@
 
 const model = require('../models/creditoModel');
 const logService = require('../services/logService');
+const LogActions = require('../constants/logAction');
 
 // POST: asignar crédito
 exports.crearCredito = async (req, res) => {
@@ -12,7 +13,7 @@ exports.crearCredito = async (req, res) => {
 
     await logService.registrarLog({
       usuario_id: req.user.id,
-      accion: 'CREAR_CREDITO',
+      accion: LogActions.CREDITO_ASIGNADO,
       descripcion: `Crédito asignado al cliente ID ${cliente_id}, monto: ${monto_total}, numero de cuotas: ${numero_cuotas} , interés: ${tasa_interes}%`,
       ip: req.ip,
       user_agent: req.headers['user-agent']
@@ -87,7 +88,7 @@ exports.pagarCuota = async (req, res) => {
     // registrar log
     await logService.registrarLog({
       usuario_id: req.user?.id,
-      action: 'PAGO_CREDITO',
+      action: LogActions.PAGO_CREDITO,
       description: `Pago de cuota ${cuota_id} desde cuenta ${cuenta_id}`,
       ip: req.ip,
       user_agent: req.headers['user-agent']
