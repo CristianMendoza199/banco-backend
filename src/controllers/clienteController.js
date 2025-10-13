@@ -1,80 +1,108 @@
-
-const LogActions = require('../constants/logAction');
-const model = require('../models/clienteModel');
+const LogActions = require("../constants/logAction");
+const logService = require("../services/logService");
+const model = require("../models/clienteModel");
 
 // GET
-exports.obtenerClientes = async (req, res) => {
+exports.obtenerClientes = async (req, res, next) => {
   try {
-    const result = await model.obtenerClientes();
-    res.json(result.rows);
+    const { rows } = await model.obtenerClientes();
+    return res.success(rows);
   } catch (error) {
-    console.error('Error en controlador al obtener clientes:', error.message);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.status = 500;
+    return next(error);
   }
 };
 
-// POST
-exports.crearCliente = async (req, res) => {
+// POST /clientes
+exports.crearCliente = async (req, res, next) => {
   try {
-    const result = await model.crearCliente(req.body);
-    const cliente = result.rows[0];
+    // valida lo básico; ajusta campos a tu esquema real
+    const { nombre, email, telefono, direccion } = req.body || {};
+    if (!nombre || !email) return res.fail(400, "faltan campos: nombre, email");
 
-        await logService.registrarLog({
-        usuario_id: req.user?.id ?? null,
-        accion: LogActions.CLIENTE_CREADO,
-        descripcion: `Cliente creado correctamente`,
-        ip: req.ip,
-        user_agent: req.headers['user-agent'],
-      });
+    const result = await model.crearCliente({
+      nombre,
+      email,
+      telefono,
+      direccion,
+    });
+    const cliente = result.rows?.[0];
 
-    res.status(201).json(cliente);
+    await logService.registrarLog({
+      usuario_id: req.user?.id ?? req.user?.sub ?? null,
+      accion: LogActions.CLIENTE_CREADO,
+      descripcion: `Cliente creado correctamente (id: ${cliente?.id ?? "N/A"})`,
+      ip: req.ip,
+      user_agent: req.headers["user-agent"],
+    });
+
+    return res.status(201).success(cliente);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    error.status = 500;
+    return next(error);
   }
 };
 
 // PUT
-exports.actualizarCliente = async (req, res) => {
-  const id = req.params.id;
-  const { nombre, email, telefono, direccion } = req.body;
-
+exports.actualizarCliente = async (req, res, next) => {
   try {
-    const result = await model.editarCliente({ id, nombre, email, telefono, direccion });
-    const cliente_actualizado = result.rows[0];
+    const { id } = req.params || {};
+    if (!id) return res.fail(400, "faltan campos: id");
+
+    const { nombre, email, telefono, direccion } = req.body || {};
+    if (!nombre && !email && !telefono && !direccion) {
+      return res.fail(400, "debes enviar al menos un campo para actualizar");
+    }
+
+    const result = await model.editarCliente({
+      id,
+      nombre,
+      email,
+      telefono,
+      direccion,
+    });
+    const cliente_actualizado = result.rows?.[0];
+
+    if (!cliente_actualizado) return res.fail(404, "Cliente no encontrado");
 
     await logService.registrarLog({
-      usuario_id: req.user.id,
+      usuario_id: req.user?.id ?? req.user?.sub ?? null,
       accion: LogActions.CLIENTE_ACTUALIZADO,
-      descripcion: `Cliente ID ${id} actualizado por usuaio ${req.user.id}`,
+      descripcion: `Cliente ID ${id} actualizado por usuario ${
+        req.user?.id ?? req.user?.sub ?? "N/A"
+      }`,
       ip: req.ip,
-      user_agent: req.headers['user-agent'],
+      user_agent: req.headers["user-agent"],
     });
 
-    res.status(cliente_actualizado.status_code).json(cliente_actualizado);
+    return res.success(cliente_actualizado);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    error.status = 500;
+    return next(error);
   }
 };
 // DELETE
-exports.eliminarCliente = async (req, res) => {
-  const id = req.params.id;
-  const cliente_eliminado = result.rows[0];
-
+exports.eliminarCliente = async (req, res, next) => {
   try {
-    const result = await model.eliminarCliente(id);
-      await logService.registrarLog({
-    usuario_id: req.user.id,
-    accion: LogActions.CLIENTE_ELIMINADO,
-    descripcion: `Cliente ID ${id} elimminado`,
-    ip: req.ip,
-    user_agent: req.headers['user-agent'],
-  });
+    const { id } = req.params || {};
+    if (!id) return res.fail(400, "faltan campos: id");
 
-    res.status(cliente_eliminado.status_code).json(cliente_eliminado);
+    const result = await model.eliminarCliente(id);
+    // muchos modelos devuelven rowCount en deletes; ajusta si tu modelo retorna rows[0]
+    if (!result.rowCount) return res.fail(404, "Cliente no encontrado");
+
+    await logService.registrarLog({
+      usuario_id: req.user?.id ?? req.user?.sub ?? null,
+      accion: LogActions.CLIENTE_ELIMINADO,
+      descripcion: `Cliente ID ${id} eliminado`,
+      ip: req.ip,
+      user_agent: req.headers["user-agent"],
+    });
+
+    // Puedes retornar 204 sin body, o confirmación explícita
+    return res.success({ deleted: true, id });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    error.status = 500;
+    return next(error);
   }
 };
-
-
-

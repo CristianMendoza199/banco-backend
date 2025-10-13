@@ -7,8 +7,8 @@ const { allowRoles } = require('../middlewares/roles');
 const {
    crearTicket,
    obtenerTodos,
-   responderTicket,
-   obtenerTicketsPorUsuario
+   obtenerTicketsPorUsuario,
+   detalleTicket
 
 } = require('../controllers/ticketController');
 
@@ -16,7 +16,7 @@ const {
 router.post('/crear', verifyToken, allowRoles('cliente'), crearTicket);
 
 //responder ticket (admin)
-router.put("/:id/responder", verifyToken, allowRoles('admin'), responderTicket);
+router.put("/:id/detalle", verifyToken, allowRoles('admin'), detalleTicket);
 
 // Obtener tickets por cliente
 router.get('/user/:user_id', verifyToken, allowRoles( 'admin'), obtenerTicketsPorUsuario);

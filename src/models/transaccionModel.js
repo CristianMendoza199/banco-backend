@@ -1,58 +1,36 @@
 const pool = require('../config/db');
 
-async function registrarTransaccion({cuenta_id, tipo, monto}) {
-    return await pool.query(
-          'SELECT * FROM registrar_transaccion($1, $2, $3)',
-          [cuenta_id, tipo, monto]
-    );
+function depositarSP({cuenta_id, monto, actorRol, actorClienteId}){
+  const sql = 'SELECT sp_deposito($1,$2,$3,$4) AS data';
+  db.query(sql, [cuenta_id, monto, actorRol, actorClienteId]);
 }
 
-async function obtenerTransaccionesFiltradas(cliente_id, filtros) {
-  const {
-    cuenta_id,
-    fecha_inicio,
-    fecha_fin,
-    tipo,
-    page = 1,
-    limit = 10
-  } = filtros;
+function retirarSP({cuenta_id, monto, actorRol, actorClienteId}){
+  const sql = 'SELECT sp_retiro($1,$2,$3,$4) AS data';
+  db.query(sql,[cuenta_id, monto, actorRol, actorClienteId]);
+}
 
-  const offset = (page - 1) * limit;
 
-  const values = [cliente_id];
-  let i = 2;
-  let where = `cuenta_id IN (
-    SELECT id FROM cuentas WHERE cliente_id = $1
-  )`;
+function registrarTransaccionSP({ cuenta_id, tipo, monto, actorRol, actorClienteId }) {
+  const sql = 'SELECT sp_transaccion_registrar($1,$2,$3,$4,$5,$6) AS data';
+  return db.query(sql, [cuenta_id, tipo, monto, actorRol, actorClienteId, null]);
+}
 
-  if (cuenta_id) {
-    where += ` AND cuenta_id = $${i++}`;
-    values.push(cuenta_id);
-  }
-  if (fecha_inicio) {
-    where += ` AND fecha >= $${i++}`;
-    values.push(fecha_inicio);
-  }
-  if (fecha_fin) {
-    where += ` AND fecha <= $${i++}`;
-    values.push(fecha_fin);
-  }
-  if (tipo) {
-    where += ` AND tipo = $${i++}`;
-    values.push(tipo);
-  }
+// Listar transacciones por cliente/cuenta y rango de fechas
+function obtenerTransaccionesFiltradasSP({ cliente_id, cuenta_id, fecha_inicio, fecha_fin, limit = 50, offset = 0 }) {
+  const sql = 'SELECT sp_transacciones_filtrar_por_cliente($1,$2,$3,$4,$5,$6) AS data';
+  return db.query(sql, [cliente_id, cuenta_id, fecha_inicio, fecha_fin, limit, offset]);
+}
 
-  const query = `
-    SELECT * FROM transacciones
-    WHERE ${where}
-    ORDER BY fecha DESC
-    LIMIT ${limit} OFFSET ${offset}
-  `;
-
-  const result = await pool.query(query, values);
-  return result.rows;
+// (Opcional) Estado de cuenta con resumen (para PDF)
+function obtenerEstadoCuentaPeriodoSP({ cliente_id, cuenta_id, fecha_inicio, fecha_fin, limit = 1000, offset = 0 }) {
+  const sql = 'SELECT sp_estado_cuenta_periodo($1,$2,$3,$4,$5,$6) AS data';
+  return db.query(sql, [cliente_id, cuenta_id, fecha_inicio, fecha_fin, limit, offset]);
 }
 module.exports = {
-    registrarTransaccion,
-    obtenerTransaccionesFiltradas
+    registrarTransaccionSP,
+    obtenerTransaccionesFiltradasSP,
+    obtenerEstadoCuentaPeriodoSP,
+    depositarSP,
+    retirarSP
 };

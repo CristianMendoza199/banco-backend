@@ -2,62 +2,32 @@
 // src/models/creditoModel.js
 const pool = require('../config/db'); // ✅ Reutilizas el pool, NO lo redeclares
 
-async function asignarCredito({ cliente_id, monto_total, tasa_interes, numero_cuotas }) {
-  const result = await pool.query(
-    `INSERT INTO creditos (cliente_id, monto_total, tasa_interes, saldo_pendiente, estado, numero_cuotas)
-     VALUES ($1, $2, $3, $2, 'Activo', $4)
-     RETURNING *`,
-    [cliente_id, monto_total, tasa_interes, numero_cuotas]
-  );
-
-  const credito =  result.rows[0];
-
-  const monto_cuota = (monto_total / numero_cuotas ).toFixed(2);
-
-  for (let i = 1; i <= numero_cuotas; i++) {
-    const fecha_vencimiento = new Date();
-    fecha_vencimiento.setMonth(fecha_vencimiento.getMonth() + i); 
-
-        await pool.query(
-      `INSERT INTO cuotas_credito (credito_id, numero_cuotas, monto_cuota, fecha_vencimiento)
-       VALUES ($1, $2, $3, $4)`,
-      [credito.id, i, monto_cuota, fecha_vencimiento]
-    );
-  }
-  return credito;
+async function asignarCreditoSP({ cliente_id, monto_total, tasa_interes, numero_cuotas }) {
+  const sql = 'SELECT sp_credito_crear($1,$2,$3,$4) AS data';
+  return db.query(sql, [cliente_id, monto_total, tasa_interes, numero_cuotas]);
 }
 
-async function obtenerCreditosPorCliente(cliente_id) {
-  const result = await pool.query(
-    `SELECT id, monto_total, tasa_interes, fecha_inicio, estado, saldo_pendiente
-    FROM creditos
-    WHERE cliente_id = $1
-    ORDER BY fecha_inicio DESC`, [cliente_id]
-  );
-  return result.rows[0];
+
+function obtenerCreditosPorClienteSP({ cliente_id, estado = null, limit = 50, offset = 0 }) {
+  const sql = 'SELECT sp_credito_listar_por_cliente($1,$2,$3,$4) AS data';
+  return db.query(sql, [cliente_id, estado, limit, offset]); // controller leerá rows[0].data
 }
 
-async function obtenerCuotasPorCredito(credito_id) {
-  const result = await pool.query(
-    `SELECT * FROM cuotas_credito 
-     WHERE credito_id = $1 
-     ORDER BY numero_cuotas ASC`,
-    [credito_id]
-  );
-  return result.rows[0];
+
+function obtenerCuotasPorCreditoSP({ credito_id, rol, actorClienteId, limit = 50, offset = 0 }) {
+  const sql = 'SELECT sp_cuotas_listar_por_credito($1,$2,$3,$4,$5) AS data';
+  db.query(sql, [credito_id, rol, actorClienteId, limit, offset]);
 }
 
-async function pagarCuota( cuota_id, cuenta_id ) {
-  return await pool.query(
-    'SELECT pagar_cuota_credito($1, $2)',
-    [cuota_id, cuenta_id]
-  );
+function pagarCuotaSP({ cuota_id, cuenta_id, actorRol, actorClienteId }) {
+  const sql = 'SELECT sp_cuota_pagar($1,$2,$3,$4) AS data';
+  return db.query(sql, [cuota_id, cuenta_id, actorRol, actorClienteId]);
 }
 
 module.exports = {
-  asignarCredito,
-  obtenerCreditosPorCliente,
-  obtenerCuotasPorCredito,
-  pagarCuota
+  asignarCreditoSP,
+  obtenerCreditosPorClienteSP,
+  obtenerCuotasPorCreditoSP,
+  pagarCuotaSP
 };
 

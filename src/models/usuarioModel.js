@@ -1,73 +1,74 @@
 const pool = require('../config/db');
 
-async function registrarUsuario({ email, password, rol, cliente_id }) {
-  return await pool.query(
-    'INSERT INTO users (email, password, rol, cliente_id, creado_en) VALUES ($1, $2, $3, $4, NOW())',
-    [email, password, rol, cliente_id]
-  );
+async function registrarUsuarioSP({ email, passwordHash }) {
+  const sql = 'SELECT sp_usuario_registrar($1,$2) AS data';
+  return db.query(sql, [email, passwordHash]); // el controller lee rows?.[0]?.data
 }
+
 
 async function obtenerUsuarioPorEmail(email) {
-  const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-  return result.rows[0];
+  const sql = 'SELECT id, email, rol, cliente_id, estado, creado_en FROM users WHERE lower(email)=lower($1) LIMIT 1';
+  return db.query(sql, [email]);
 }
 
-async function createUsuario({ email, password, rol, cliente_id }) {
-  return await pool.query(
-    'INSERT INTO users (email, password, rol, cliente_id, creado_en) VALUES ($1, $2, $3, $4, NOW())',
-    [email, password, rol, cliente_id]
-  );
-}
-
-async function obtenerTodosLosUsuarios() {
-  const result = await pool.query('SELECT id, email, rol, cliente_id, creado_en FROM users');
-  return result.rows;
+async function createUsuario({ email, passwordHash, rol = 'cliente', cliente_id = null }) {
+    const  sql = 'SELECT sp_usuario_crear($1,$2,$3,$4) AS data';
+    return db.query(sql,[email, passwordHash, rol, cliente_id]);
 }
 
 
-async function getUsuarioPorId(id) {
-  const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
-  return result.rows[0];
+async function obtenerUsuarios({ estado = 'ACTIVO', limit = 100, offset = 0 } = {} ) {
+  const sql = `SELECT sp_obtener_usuarios($1, $2, $3) AS data`;
+    return await db.query(sql, [estado, limit, offset]);
 }
+
+
+async function obtenerUsuarioPorId(id) {
+  const sql = `SELECT  sp_obtener_usuarios($1) AS data`;
+  return await db.query(sql,[id]);
+}
+
 
 async function updateUsuario(id, { email, rol, cliente_id }) {
-  const result = await pool.query(
-    `UPDATE users
-     SET email = $1, rol = $2, cliente_id = $3
-     WHERE id = $4
-     RETURNING id, email, rol, cliente_id, creado_en`,
-    [email, rol, cliente_id, id]
-  );
-  return result.rows[0];
+    const sql  = 'SELECT sp_usuario_actualizar($1, $2, $3, $4) AS data';
+    return db.query(sql,[id, email, rol, cliente_id]);
 }
 
-async function deleteUsuario(id) {
-  const result = await pool.query(
-    'DELETE FROM users WHERE id = $1 RETURNING id, email',
-    [id]
-  );
-  return result.rows[0];
+async function eliminarUsuario(id) {
+  const sql = 'SELECT sp_usuario_eliminar($1)  AS data';
+  return await db.query(sql,[id]);
 }
 
-async function changePassword(id, nuevaPasswordHasheada) {
-  await pool.query('UPDATE users SET password = $1 WHERE id = $2', [nuevaPasswordHasheada, id])
+async function obtenerPasswordHashSP({ id }) {
+  const sql = 'SELECT sp_usuario_obtener_hash($1) AS data';
+  return db.query(sql, [id]);            // controller leerá rows?.[0]?.data?.password_hash
 }
 
-async function actualizarPassword(id, nuevaPasswordHasheada) {
-  await pool.query(
-    'UPDATE users SET password = $1 WHERE id = $2',
-    [nuevaPasswordHasheada, id]
-  );
+async function actualizarPasswordSP({ id, newHash, actorId }) {
+  const sql = 'SELECT sp_usuario_actualizar_password($1,$2,$3) AS data';
+  return db.query(sql, [id, newHash, actorId]); // { ok: true }
+}
+
+async function solicitarResetPasswordSP({ email, ip, ua }) {
+  const sql = 'SELECT sp_password_solicitar_reset($1,$2,$3) AS data';
+  return db.query(sql, [email, ip, ua]); // { ok, reset_token, expires_at }
+}
+
+async function confirmarResetPasswordSP({ token, newHash, ip, ua }) {
+  const sql = 'SELECT sp_password_confirmar_reset($1,$2,$3,$4) AS data';
+  return db.query(sql, [token, newHash, ip, ua]); // { ok: true }
 }
 
 module.exports = {
   obtenerUsuarioPorEmail,
   createUsuario,
-  obtenerTodosLosUsuarios,
-  getUsuarioPorId,
+  obtenerUsuarios,
+  obtenerUsuarioPorId,
   updateUsuario,
-  deleteUsuario,
-  changePassword, 
-  registrarUsuario,
-  actualizarPassword
+  eliminarUsuario,
+  registrarUsuarioSP,
+  obtenerPasswordHashSP,
+  actualizarPasswordSP,
+  solicitarResetPasswordSP,
+  confirmarResetPasswordSP
 };

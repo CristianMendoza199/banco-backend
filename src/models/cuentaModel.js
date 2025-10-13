@@ -1,31 +1,31 @@
-const pool = require('../config/db');
+//const pool = require('../config/db');
+const db = require('../config/db');
 
-async function crearCuenta({cliente_id, tipo_cuenta_id, saldo}){
-    return await pool.query('SELECT * FROM crear_cuenta($1, $2, $3)',
-      [cliente_id, tipo_cuenta_id, saldo]);
+async function crearCuentaSP({ cliente_id, tipo_cuenta_id, saldo }) {
+  const sql = `SELECT sp_cuenta_crear($1, $2, $3) AS data`;
+  return db.query(sql, [cliente_id, tipo_cuenta_id, saldo]);
 }
 
+
 async function obtenerCuentasPorCliente(cliente_id) {
-    return await pool.query(
-      'SELECT * FROM cuentas WHERE cliente_id = $1',
-      [cliente_id]
-    );
+      const sql = `SELECT sp_cuentas_por_cliente($1) AS data`;
+      return db.query(sql,[cliente_id]);
 }
 
 
 async function obtenerTodasLasCuentas() {
-    return await pool.query(
-        'SELECT * FROM cuentas'
-    );
+  const sql = `SELECT sp_obtener_cuentas() AS data`;
+    return await db.query(sql);
 }
 
 async function eliminarCuenta(id) {
-  return await pool.query('DELETE FROM cuentas WHERE id = $1', [id]);
+  const sql = `SELECT sp_cuenta_eliminar($1) AS data`;
+  return await db.query( sql, [id]);
 }
 
 
 module.exports = {
-    crearCuenta,
+    crearCuentaSP,
     obtenerCuentasPorCliente,
     obtenerTodasLasCuentas,
       eliminarCuenta

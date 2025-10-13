@@ -1,14 +1,25 @@
 
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 require('dotenv').config();
 
-const app = express();
+const requestId = require('./middlewares/requestId');
+const responseFormat = require('./middlewares/responseFormat');
+const errorHandler = require('./middlewares/errorHandler');
 
-// Middlewares
+
+
+
+const app = express();
 app.use(cors());
+app.use(helmet());
+app.use(cors({ origin: true, Credentials: true}));
 app.use(express.json());
 
+
+app.use(requestId());
+app.use(responseFormat());
 
 // Rutas
 const clienteRoutes = require('./routes/clienteRoutes');
@@ -44,6 +55,9 @@ app.use('/api/auth', authRoutes);
 const solicitudCreditoRoutes = require('./routes/solicitudCreditoRoutes');
 app.use('/api/solicitudescredito', solicitudCreditoRoutes);
 
+app.use(errorHandler);
+
+module.exports = app;
 
 // Puerto
 const PORT = process.env.PORT || 3001;

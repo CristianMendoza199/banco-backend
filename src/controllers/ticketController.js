@@ -3,138 +3,95 @@ const logService = require("../services/logService");
 const LogActions = require('../constants/logAction');
 
 // Crear ticket
-exports.crearTicket = async (req, res) => {
+const toInt = v => (v === '' || v === null || v === undefined ? NaN : Number(v));
+const isNonEmpty = s => !!String(s ?? '').trim();
+
+exports.crearTicket = async (req, res, next) => {
   try {
-    const {  motivo, mensaje } = req.body;
-    const user_id = req.user.id; 
-    const ticket = await ticketModel.crearTicket({ motivo, mensaje, user_id});
-    
-     await logService?.registrarLog?.({
+    const user_id = req.user?.id ?? req.user?.sub ?? null;
+    const asunto  = (req.body?.asunto || req.body?.motivo || '').trim();
+    const mensaje = (req.body?.mensaje || '').trim();
+    const prioridad = (req.body?.prioridad || 'MEDIA').toUpperCase();
+    const categoria = (req.body?.categoria || null);
+
+    if (!user_id) return res.fail(401, 'No autorizado');
+    if (!isNonEmpty(asunto))  return res.fail(400, 'asunto es obligatorio');
+    if (!isNonEmpty(mensaje)) return res.fail(400, 'mensaje es obligatorio');
+    if (!['BAJA','MEDIA','ALTA'].includes(prioridad)) return res.fail(400, 'prioridad inválida');
+
+    const { rows } = await model.crearTicket({ user_id, asunto, mensaje, prioridad, categoria });
+    const data = rows?.[0]?.data;
+    if (!data?.id) return res.fail(500, 'No se pudo crear el ticket');
+
+    logService?.registrarLog?.({
       usuario_id: user_id,
       accion: LogActions.CREATE_TICKET,
-      descripcion: `Creó TICKET ${motivo}`,
+      descripcion: `Ticket ${data.id} creado (${asunto})`,
       ip: req.ip,
-      user_agent: req.headers['user-agent']
-    });
+      user_agent: req.headers['user-agent'],
+      request_id: req.context?.requestId ?? null
+    }).catch(()=>{});
 
-    return res.status(201).json({
-      success: true,
-      status_code: 201,
-      message: "Ticket creado correctamente",
-      data: ticket,
-    });
-  } catch (error) {
-    console.error("error al crear el ticket:", error);
-
-       await logService?.registrarLog?.({
-      usuario_id: user_id,
-      accion: LogActions.TICKET_FAILED_CREATE,
-      descripcion: `error al crear el ticket ${error}`,
-      ip: req.ip,
-      user_agent: req.headers['user-agent']
-    });
-
-    return res.status(500).json({
-      success: false,
-      status_code: 500,
-      message: error.message,
-    });
-  }
+    return res.status(201).success(data);
+  } catch (err) { err.status = err.status || 500; return next(err); }
 };
 
-exports.responderTicket = async (req, res) => {
+exports.obtenerTicketsPorUsuario = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const { respuesta_admin, estado } = req.body || {};
+    // Si es cliente, ignora path param y usa el del token
+    const isAdmin = req.user?.rol === 'admin';
+    const pathUserId = toInt(req.params?.user_id);
+    const user_id = isAdmin ? (Number.isInteger(pathUserId) ? pathUserId : (req.user?.id ?? null))
+                            : (req.user?.id ?? null);
 
-     const ticket = await ticketModel.responderTicket({ id, respuesta_admin, estado });
-    // Validar estados permitidos
-    const estadosPermitidos = ["pendiente", "resuelto"];
-    if (estado && !estadosPermitidos.includes(estado)) {
-      return res.status(400).json({
-        success: false,
-        status_code: 400,
-        message: "Estado inválido",
-      });
+    if (!user_id) return res.fail(401, 'No autorizado');
+
+    const { rows } = await model.obtenerTicketsPorUsuario(user_id);
+    const data = rows?.[0]?.data ?? [];
+    return res.success({ items: data });
+  } catch (err) { err.status = err.status || 500; return next(err); }
+};
+
+exports.obtenerTodos = async (req, res, next) => {
+  try {
+    if (req.user?.rol !== 'admin') return res.fail(403, 'Solo admin');
+
+    const estado    = req.query?.estado ? String(req.query.estado).toUpperCase().trim() : null;
+    const prioridad = req.query?.prioridad ? String(req.query.prioridad).toUpperCase().trim() : null;
+    const categoria = req.query?.categoria ? String(req.query.categoria).toUpperCase().trim() : null;
+    const limit     = toInt(req.query?.limit)  || 50;
+    const offset    = toInt(req.query?.offset) || 0;
+
+    if (estado && !['PENDIENTE','EN_PROCESO','RESUELTO','CERRADO'].includes(estado))
+      return res.fail(400, 'estado inválido');
+    if (prioridad && !['BAJA','MEDIA','ALTA'].includes(prioridad))
+      return res.fail(400, 'prioridad inválida');
+
+    const { rows } = await model.obtenerTodosLosTickets({ estado, prioridad, categoria, limit, offset });
+    const data = rows?.[0]?.data ?? { items: [], pagination: { limit, offset, total: 0 } };
+
+    return res.success(data);
+  } catch (err) { err.status = err.status || 500; return next(err); }
+};
+
+
+exports.detalleTicket = async (req, res, next) => {
+  try {
+    const id = toInt(req.params?.id);
+    if (!Number.isInteger(id) || id <= 0) return res.fail(400, 'ticket_id inválido');
+
+    const { rows } = await model.detalleTicket(id);
+    const data = rows?.[0]?.data;
+    if (!data?.ticket?.id) return res.fail(404, 'Ticket no encontrado');
+
+    // Seguridad mínima: si es cliente, solo su ticket
+    const isClient = req.user?.rol !== 'admin';
+    if (isClient && data.ticket.user_id !== (req.user?.id ?? req.user?.sub)) {
+      return res.fail(403, 'No autorizado');
     }
 
-    await logService?.registrarLog?.({
-      usuario_id: req.user?.id,
-      accion: 'RESPONDER_TICKET',
-      descripcion:`Ticket ID ${id} - Estado: ${estado || "sin cambio"}`,
-      ip: req.ip,
-      user_agent: req.headers['user-agent']
-    });
-
-    return res.status(200).json({
-      success: true,
-      status_code: 200,
-      message: "Ticket actualizado correctamente",
-      data: ticket,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      status_code: 500,
-      message: error.message,
-    });
-  }
+    return res.success(data);
+  } catch (err) { err.status = err.status || 500; return next(err); }
 };
 
-
-// Obtener tickets por cliente
-exports.obtenerTicketsPorUsuario = async (req, res) => {
-    try {
-        const { user_id } = req.params;
-
-          if (!user_id) {
-            return res.status(400).json({
-              status_code: 400,
-              status_desc: "El parámetro user_id es obligatorio"
-            });
-          }
-
-        const tickets = await ticketModel.obtenerTicketsPorUsuario(user_id);
-
-            if (!tickets || tickets.length === 0) {
-              return res.status(404).json({
-                status_code: 404,
-                status_desc: "No se encontraron tickets para este usuario"
-              });
-        }
-
-        res.status(200).json({
-          status_code: 200,
-          status_desc: "Tickets obtenidos correctamente",
-          data: tickets,
-        });
-        } catch (error) {
-          console.error("Error en obtenerTicketsPorUsuario:", error.message);
-          res.status(500).json({
-            status_code: 500,
-            status_desc: "Error al obtener tickets",
-            error: error.message
-          });
-        }
-};
-      
-
-// Obtener todos los tickets (admin)
-exports.obtenerTodos = async (req, res) => {
-    try {
-        const tickets = await ticketModel.obtenerTodosLosTickets();
-
-        res.status(200).json({
-            status_code: 200,
-            status_desc: 'Lista de tickets',
-            data: tickets,
-        });
-    } catch (error) {
-        res.status(500).json({
-            status_code: 500,
-            status_desc: 'Error al obtener tickets',
-            error: error.message
-        });
-    }
-};
 

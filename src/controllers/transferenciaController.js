@@ -1,56 +1,44 @@
 const transferenciaModel = require('../models/transferenciaModel');
 const logService = require('../services/logService');
-const logAction = require('../constants/logAction');
+const LogActions =  require('../constants/logAction');
 
-exports.transferir = async (req, res) => {
+exports.transferir = async (req, res, next) => { 
   try {
-    const { cuenta_origen, cuenta_destino, monto } = req.body;
+    const cuenta_origen  = Number(req.body?.cuenta_origen);
+    const cuenta_destino = Number(req.body?.cuenta_destino);
+    const monto          = Number(req.body?.monto);
+    if (!Number.isInteger(cuenta_origen) || cuenta_origen<=0) 
+       return res.fail(400,'cuenta_origen inválida');
+    if (!Number.isInteger(cuenta_destino)|| cuenta_destino<=0)
+       return res.fail(400,'cuenta_destino inválida');
+    if (cuenta_origen === cuenta_destino)
+       return res.fail(400,'Las cuentas deben ser distintas');
+    if (!Number.isFinite(monto) || monto<=0) 
+      return res.fail(400,'monto debe ser > 0');
 
-    if (!cuenta_origen || !cuenta_destino || !monto) {
-      return res.status(400).json({
-        success: false,
-        message: 'Todos los campos son obligatorios',
-      });
-    }
+    const actorRol = req.user?.rol || 'cliente';
+    const actorClienteId = req.user?.cliente_id ?? null;
+    const actorId = req.user?.id ?? req.user?.sub ?? null;
+    const idempotencyKey = req.headers['x-idempotency-key'] || null;
 
-    const result = await transferenciaModel.realizarTransferencia({
-      cuenta_origen,
-      cuenta_destino,
-      monto,
+    const { rows } = await transferenciaModel.realizarTransferenciaSP({
+      cuenta_origen, cuenta_destino, monto, actorRol, actorClienteId, actorId, idempotencyKey
     });
+    const data = rows?.[0]?.data;
+    if (!data?.transfer) return res.fail(500, 'No se pudo realizar la transferencia');
 
-    await logService.registrarLog({
-      usuario_id: req.user.id,
-      accion: logAction.TRANSFERENCIA_REALIZADA,
-      descripcion: `trasnferencia realizada 
-        cuenta origen ${cuenta_origen} 
-        cuenta destino ${cuenta_destino}
-        por un monto de: ${monto}
-      `,
+    logService.registrarLog({
+      usuario_id: actorId,
+      accion: LogActions.TRANSFERENCIA_REALIZADA,
+      descripcion: `Transferencia ${data.transfer.id}: ${cuenta_origen} → ${cuenta_destino} por ${monto}`,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
-      
-    });
+      request_id: req.context?.requestId ?? null,
+    }).catch(()=>{});
 
-    return res.status(200).json({
-      success: true,
-      message: result.message,
-    });
+    return res.status(200).success(data);
   } catch (error) {
-    console.error('Error en transferencia:', error.message);
-    
-      await logService.registrarLog({
-      usuario_id: req.user?.id ?? null,
-      accion: LogActions.TRANSFERENCIA_FALLIDA,
-      descripcion: `Error al transferir de ${req.body?.cuenta_origen} a ${req.body?.cuenta_destino}. Detalle: ${error.message}`,
-      ip: req.ip,
-      user_agent: req.headers['user-agent'],
-    }); 
-
-    return res.status(500).json({
-      success: false,
-      message: 'Error al realizar la transferencia',
-      error: error.message,
-    });
+    error.status = error.status || 500;
+    return next(error);
   }
 };

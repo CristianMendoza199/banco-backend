@@ -1,48 +1,70 @@
-const pool = require('../config/db');
+const pool = require("../config/db");
 
-async function crearTarjeta({ cuenta_id, tipo, limite_credito = 0 }) {
-  return await pool.query(
-    'SELECT crear_tarjeta($1, $2, $3)',
-    [cuenta_id, tipo, limite_credito]
-  );
+function crearTarjetaSP({ cuenta_id, tipo, limite_credito = null, actorRol, actorClienteId }) {
+  const sql = 'SELECT sp_tarjeta_crear($1,$2,$3,$4,$5) AS data';
+  return db.query(sql, [cuenta_id, tipo, limite_credito, actorRol, actorClienteId]);
 }
 
-async function obtenerTarjetasPorCliente(cliente_id) {
-  const query = `
-    SELECT t.*, tc.limite_credito
-    FROM tarjeta t
-    LEFT JOIN tarjeta_credito tc ON t.id = tc.tarjeta_id
-    INNER JOIN cuentas c ON t.cuenta_id = c.id
-    WHERE c.cliente_id = $1
-  `;
-  return await pool.query(query, [cliente_id]);
+/**
+ * Cambiar estado de tarjeta.
+ * Estados: 'ACTIVA'|'BLOQUEADA'|'REPORTADA'|'CANCELADA'
+ * Params: { tarjeta_id, nuevo_estado, motivo?, actorId, actorRol, actorClienteId }
+ */
+function cambiarEstadoTarjetaSP({ tarjeta_id, nuevo_estado, motivo = null, actorId, actorRol, actorClienteId }) {
+  const sql = 'SELECT sp_tarjeta_cambiar_estado($1,$2,$3,$4,$5,$6) AS data';
+  return db.query(sql, [tarjeta_id, nuevo_estado, motivo, actorId, actorRol, actorClienteId]);
 }
 
-async function bloquearTarjeta(id) {
-    return await pool.query('UPDATE tarjeta  SET estado = $1 WHERE id = $2', ['bloqueada', id]);
+/**
+ * Reportar tarjeta (convenience de cambiar estado a REPORTADA).
+ * Params: { tarjeta_id, motivo, actorId, actorRol, actorClienteId }
+ */
+function reportarTarjetaSP({ tarjeta_id, motivo, actorId, actorRol, actorClienteId }) {
+  const sql = 'SELECT sp_tarjeta_reportar($1,$2,$3,$4,$5) AS data';
+  return db.query(sql, [tarjeta_id, motivo, actorId, actorRol, actorClienteId]);
 }
 
-async function activarTarjeta(id) {
-    return await pool.query('UPDATE tarjeta SET estado  = $1 WHERE id = $2',['activa',id]);
+/**
+ * Detalle de tarjeta (header + crédito + últimos eventos).
+ * Params: { tarjeta_id, actorRol, actorClienteId }
+ */
+function detalleTarjetaSP({ tarjeta_id, actorRol, actorClienteId }) {
+  const sql = 'SELECT sp_tarjeta_detalle($1,$2,$3) AS data';
+  return db.query(sql, [tarjeta_id, actorRol, actorClienteId]);
 }
 
-async function eliminarTarjeta(id) {
-    return await pool.query('DELETE FROM tarjeta WHERE id = $1'[id]);
+/**
+ * Listar tarjetas por cuenta con paginación.
+ * Params: { cuenta_id, limit=50, offset=0 }
+ */
+function listarTarjetasPorCuentaSP({ cuenta_id, limit = 50, offset = 0 }) {
+  const sql = 'SELECT sp_tarjetas_listar_por_cuenta($1,$2,$3) AS data';
+  return db.query(sql, [cuenta_id, limit, offset]);
 }
 
-async function obtenerTodasTarjetas() {
-    return await pool.query('SELECT FROM tarjeta');
+/**
+ * Actualizar límite de tarjeta de crédito (ajusta disponible por la diferencia).
+ * Params: { tarjeta_id, nuevo_limite, actorId, actorRol, actorClienteId }
+ */
+function actualizarLimiteTarjetaSP({ tarjeta_id, nuevo_limite, actorId, actorRol, actorClienteId }) {
+  const sql = 'SELECT sp_tarjeta_actualizar_limite($1,$2,$3,$4,$5) AS data';
+  return db.query(sql, [tarjeta_id, nuevo_limite, actorId, actorRol, actorClienteId]);
 }
 
-async function reportarTarjeta(tarjeta_id, motivo) {
-  return await pool.query('SELECT reportar_tarjeta($1, $2)', [tarjeta_id, motivo]);
+const db = require('../config/db');
+
+function emitirDebitoPorCuenta({ cuenta_id, actorRol, actorClienteId }) {
+  const sql = 'SELECT sp_tarjeta_debito_emitir_por_cuenta($1,$2,$3) AS data';
+  return db.query(sql, [cuenta_id, actorRol, actorClienteId]);
 }
+
+
 module.exports = {
-  crearTarjeta,
-  obtenerTarjetasPorCliente,
-  bloquearTarjeta,
-  activarTarjeta,
-  eliminarTarjeta, 
-  obtenerTodasTarjetas, 
-  reportarTarjeta
+  crearTarjetaSP,
+  listarTarjetasPorCuentaSP,
+  cambiarEstadoTarjetaSP,
+  reportarTarjetaSP,
+  detalleTarjetaSP,
+  actualizarLimiteTarjetaSP,
+  emitirDebitoPorCuenta
 };

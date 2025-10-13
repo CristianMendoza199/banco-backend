@@ -1,38 +1,28 @@
-const pool = require('../config/db');
+const pool = require("../config/db");
 
-async function crearSolicitud({ cliente_id, monto_solicitado, tasa_interes, numero_cuotas }) {
-  const result = await pool.query(
-    `INSERT INTO solicitudes_credito (cliente_id, monto_solicitado, tasa_interes, numero_cuotas)
-     VALUES ($1, $2, $3, $4) RETURNING *`,
-    [cliente_id, monto_solicitado, tasa_interes, numero_cuotas]
-  );
-  return result.rows[0];
+function crearSolicitudSP({ cliente_id, monto_solicitado, numero_cuotas }) {
+  const sql = 'SELECT sp_credito_solicitud_crear($1,$2,$3) AS data';
+  return db.query(sql, [cliente_id, monto_solicitado, numero_cuotas]);
 }
 
-
-async function obtenerSolicitudes(estado) {
-  let query = 'SELECT * FROM solicitudes_credito';
-  const params = [];
-  if (estado) {
-    query += ' WHERE estado = $1';
-    params.push(estado);
-  }
-  const result = await pool.query(query, params);
-  return result.rows[0];
+function obtenerSolicitudesSP({ actorRol, actorClienteId = null, estado = null, limit = 50, offset = 0 }) {
+  const sql = 'SELECT sp_credito_solicitud_listar($1,$2,$3,$4,$5) AS data';
+  return db.query(sql, [actorRol, actorClienteId, estado, limit, offset]);
 }
 
-async function actualizarEstadoSolicitud(id, estado) {
-  const result = await pool.query(
-    `UPDATE solicitudes_credito SET estado = $1 WHERE id = $2 RETURNING *`,
-    [estado, id]
-  );
-  return result.rows[0];
+function aprobarSolicitudSP({ solicitud_id, actor_rol, tasa_interes }) {
+  const sql = 'SELECT sp_credito_solicitud_aprobar($1,$2,$3) AS data';
+  return db.query(sql, [solicitud_id, actor_rol, tasa_interes]);
 }
 
-
+function rechazarSolicitudSP({ solicitud_id, actor_rol }) {
+  const sql = 'SELECT sp_credito_solicitud_rechazar($1,$2) AS data';
+  return db.query(sql, [solicitud_id, actor_rol]);
+}
 
 module.exports = {
-    crearSolicitud,
-    obtenerSolicitudes, 
-    actualizarEstadoSolicitud
-}
+  crearSolicitudSP,
+  obtenerSolicitudesSP,
+  aprobarSolicitudSP,
+  rechazarSolicitudSP
+};

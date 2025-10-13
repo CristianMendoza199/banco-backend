@@ -3,187 +3,168 @@ const model = require('../models/tarjetaModel');
 const { registrarLog } = ('../services/logService');
 const LogActions = require('../constants/logAction');
 
-exports.crearTarjeta = async (req, res) => {
-  try {
-    const { cuenta_id, tipo, limite_credito } = req.body;
+const toInt = v => (v === '' || v === null || v === undefined ? NaN : Number(v));
+const isNumber = (v) => typeof v === 'number' && !Number.isNaN(v);
 
-    if (!cuenta_id || !tipo) {
-      return res.status(400).json({
-        status_code: 400,
-        status_desc: 'Datos incompletos'
-      });
+exports.crearTarjeta = async (req, res, next) => {
+  try {
+    const cuenta_id = toInt(req.body?.cuenta_id);
+    const tipo = String(req.body?.tipo || '').toLowerCase().trim();
+    const limite_credito = req.body?.limite_credito !== undefined ? toNum(req.body.limite_credito) : null;
+
+    if (!Number.isInteger(cuenta_id) || cuenta_id <= 0) return res.fail(400, 'cuenta_id inválido');
+    if (!['debito', 'credito'].includes(tipo)) return res.fail(400, "tipo inválido (use: 'debito' | 'credito')");
+    if (tipo === 'credito' && (!Number.isFinite(limite_credito) || limite_credito <= 0)) {
+      return res.fail(400, 'limite_credito debe ser > 0 para tarjetas de crédito');
     }
 
-    await model.crearTarjeta({ cuenta_id, tipo, limite_credito });
+    const actorRol = req.user?.rol || 'cliente';
+    const actorClienteId = req.user?.cliente_id ?? null;
+    const actorId = req.user?.id ?? req.user?.sub ?? null;
 
+    const { rows } = await model.crearTarjetaSP({ cuenta_id, tipo, limite_credito, actorRol, actorClienteId });
+    const data = rows?.[0]?.data;
+    if (!data?.id) return res.fail(500, 'No se pudo crear la tarjeta');
 
-       await logService.registrarLog({
-      usuario_id: req.user.id,
-      accion: LogActions,
-      descripcion: `Crédito asignado al cliente ID ${cliente_id}, monto: ${monto_total}, numero de cuotas: ${numero_cuotas} , interés: ${tasa_interes}%`,
+    logService.registrarLog({
+      usuario_id: actorId,
+      accion: LogActions.CREATE_CARD,
+      descripcion: `Tarjeta ${data.id} (${tipo}) creada para cuenta ${cuenta_id}${tipo === 'credito' ? `, límite ${limite_credito}` : ''}`,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+      request_id: req.context?.requestId ?? null,
+    }).catch(()=>{});
+
+    return res.status(201).success(data);
+  } catch (err) { err.status = err.status || 500; return next(err); }
+};
+
+exports.cambiarEstado = async (req, res, next) => {
+  try {
+    const tarjeta_id = toInt(req.params?.id);
+    const nuevo_estado = String(req.body?.nuevo_estado || '').toUpperCase().trim();
+    const motivo = (req.body?.motivo || '').trim() || null;
+
+    if (!Number.isInteger(tarjeta_id) || tarjeta_id <= 0) return res.fail(400, 'tarjeta_id inválido');
+    if (!['ACTIVA','BLOQUEADA','REPORTADA','CANCELADA'].includes(nuevo_estado)) {
+      return res.fail(400, "nuevo_estado inválido (use: ACTIVA | BLOQUEADA | REPORTADA | CANCELADA)");
+    }
+
+    const actorRol = req.user?.rol || 'cliente';
+    const actorClienteId = req.user?.cliente_id ?? null;
+    const actorId = req.user?.id ?? req.user?.sub ?? null;
+
+    const { rows } = await model.cambiarEstadoTarjetaSP({
+      tarjeta_id, nuevo_estado, motivo, actorId, actorRol, actorClienteId
+    });
+    const data = rows?.[0]?.data;
+    if (!data) return res.fail(500, 'No se pudo cambiar el estado');
+
+    logService.registrarLog({
+      usuario_id: actorId,
+      accion: LogActions.CARD_STATUS_CHANGE,
+      descripcion: `Tarjeta ${tarjeta_id}: ${data.estado_anterior} → ${data.estado_nuevo}${motivo ? ` (motivo: ${motivo})` : ''}`,
       ip: req.ip,
       user_agent: req.headers['user-agent']
-    });
-    
-    res.status(201).json({
-      status_code: 201,
-      status_desc: 'Tarjeta creada correctamente'
-    });
+    }).catch(()=>{});
 
-  } catch (error) {
-    console.error('Error al crear tarjeta:', error.message);
-    res.status(500).json({
-      status_code: 500,
-      status_desc: 'Error interno al crear tarjeta',
-      error: error.message
-    });
-  }
+    return res.success(data);
+  } catch (err) { err.status = err.status || 500; return next(err); }
 };
 
 
-  exports.obtenerTarjetasPorCliente = async (req, res) => {
+exports.reportarTarjeta = async (req, res, next) => {
   try {
-    const cliente_id = req.user.cliente_id;
+    const tarjeta_id = toInt(req.params?.id);
+    const motivo = (req.body?.motivo || '').trim();
 
-    if (!cliente_id) {
-      return res.status(403).json({
-        status_code: 403,
-        status_desc: 'Este usuario no tiene tarjetas asociadas'
-      });
-    }
+    if (!Number.isInteger(tarjeta_id) || tarjeta_id <= 0) return res.fail(400, 'tarjeta_id inválido');
+    if (!motivo) return res.fail(400, 'motivo es obligatorio');
 
-    const result = await model.obtenerTarjetasPorCliente(cliente_id);
+    const actorRol = req.user?.rol || 'cliente';
+    const actorClienteId = req.user?.cliente_id ?? null;
+    const actorId = req.user?.id ?? req.user?.sub ?? null;
 
-    res.status(200).json({
-      status_code: 200,
-      status_desc: 'Tarjetas encontradas',
-      tarjetas: result.rows
-    });
+    const { rows } = await model.reportarTarjetaSP({ tarjeta_id, motivo, actorId, actorRol, actorClienteId });
+    const data = rows?.[0]?.data;
+    if (!data) return res.fail(500, 'No se pudo reportar la tarjeta');
 
-  } catch (error) {
-    console.error('Error al obtener tarjetas:', error.message);
-    res.status(500).json({
-      status_code: 500,
-      status_desc: 'Error al consultar tarjetas',
-      error: error.message
-    });
-  }
-};
+    logService.registrarLog({
+      usuario_id: actorId,
+      accion: LogActions.CARD_REPORTED,
+      descripcion: `Tarjeta ${tarjeta_id} reportada (motivo: ${motivo})`,
+      ip: req.ip,
+      user_agent: req.headers['user-agent']
+    }).catch(()=>{});
 
-exports.bloquearTarjeta = async(req, res)  => {
-  try{
-    const { id } = req.params;
-    await model.bloquearTarjeta(id);
-
-        await registrarLog({
-        usuario_id: req.user.id,
-        accion: LogActions.BLOCK_CARD,
-        descripcion: `La Tarjeta ${tarjeta_id} ha sido bloqueada `,
-        ip: req.ip,
-        user_agent: req.headers['user-agent']
-      });
-
-
-    res.status(200).json({status_desc: 'Tarjeta bloqueada'});
-  }catch(error){
-    res.status(500).json({status_desc: 'Error al bloquear la tajeta', error: error.message});
-  }
-};
-
-exports.activarTarjeta = async(req, res) => {
-  try{
-    const { id } = req.params;
-    await model.activarTarjeta(id);
-
-        await registrarLog({
-        usuario_id: req.user.id,
-        accion: LogActions.UNBLOCK_CARD,
-        descripcion: `La Tarjeta ${tarjeta_id} ha sido desbloqueada`,
-        ip: req.ip,
-        user_agent: req.headers['user-agent']
-      });
-
-    res.status(200).json({status_desc: 'Tarjeta activada'});
-  } catch(error){
-    res.status(500).json({status_desc: 'Error al activar la tarjeta', error: error.message});
-  }
-};
-
-exports.eliminarTarjeta = async(req, res) => {
-  try{
-    const { id } = req.params;
-    await model.eliminarTarjeta(id);
-        await registrarLog({
-        usuario_id: req.user.id,
-        accion: LogActions.DELETE_CARD,
-        descripcion: `Tarjeta ${tarjeta_id}`,
-        ip: req.ip,
-        user_agent: req.headers['user-agent']
-      });
-    res.status(200).json({status_desc: 'Tarjeta eliminada'});
-  }catch(error){
-    res.status(500).json({status_desc: 'Error al eliminar la tarjeta', error: error.message});
-  }
-};
-
-exports.obtenerTodas = async(req, res) => {
-    try{
-      const  result = await model.obtenerTodasTarjetas();
-      res.status(200).json({tarjetas: result.rows});
-    } catch(error){
-      res.status(500).json({status_desc: 'Error al cargar las tarjetas', error: error.message});
-    }
+    return res.success(data);
+  } catch (err) { err.status = err.status || 500; return next(err); }
 };
 
 
-exports.reportarTarjeta =  async(req, res) => {
+exports.detalleTarjeta = async (req, res, next) => {
   try {
-    const cliente_id = req.user.cliente_id;
-    const { tarjeta_id, motivo } = req.body;
+    const tarjeta_id = toInt(req.params?.id);
+    if (!Number.isInteger(tarjeta_id) || tarjeta_id <= 0) return res.fail(400, 'tarjeta_id inválido');
 
+    const actorRol = req.user?.rol || 'cliente';
+    const actorClienteId = req.user?.cliente_id ?? null;
 
-    const { rows } = await pool.query(
-      'SELECT * FROM tarjeta WHERE id = $1 AND cuenta_id IN (SELECT id FROM cuentas WHERE cliente_id = $2)',
-      [tarjeta_id, cliente_id]
-    );
+    const { rows } = await model.detalleTarjetaSP({ tarjeta_id, actorRol, actorClienteId });
+    const data = rows?.[0]?.data;
+    if (data?.error) return res.fail(403, 'No autorizado');
+    if (!data?.tarjeta) return res.fail(404, 'Tarjeta no encontrada');
 
-    if (rows.length === 0) {
-      return res.status(403).json({
-        status_code: 403,
-        status_desc: 'No tienes permiso para reportar esta tarjeta'
-      });
-    }
+    return res.success(data);
+  } catch (err) { err.status = err.status || 500; return next(err); }
+};
 
-    const tarjeta = rows[0];
+/**
+ * GET /tarjetas?cuenta_id=..&limit=..&offset=..
+ */
+exports.listarPorCuenta = async (req, res, next) => {
+  try {
+    const cuenta_id = toInt(req.query?.cuenta_id);
+    const limit  = toInt(req.query?.limit)  || 50;
+    const offset = toInt(req.query?.offset) || 0;
 
-    if (tarjeta.estado === 'Reportada') {
-          return res.status(409).json({
-        status_code: 409,
-          status_desc: 'La tarjeta ya fue reportada previamente'
-        });
-    }
+    if (!Number.isInteger(cuenta_id) || cuenta_id <= 0) return res.fail(400, 'cuenta_id inválido');
 
-    await model.reportarTarjeta(tarjeta_id, motivo);
+    const { rows } = await model.listarTarjetasPorCuentaSP({ cuenta_id, limit, offset });
+    const data = rows?.[0]?.data ?? { items: [], pagination: { limit, offset, total: 0 } };
 
-      await registrarLog({
-        usuario_id: req.user.id,
-        accion: LogActions.REPORT_CARD,
-        descripcion: `Tarjeta ${tarjeta_id} reportada como: ${motivo}`,
-        ip: req.ip,
-        user_agent: req.headers['user-agent']
-      });
+    return res.success(data);
+  } catch (err) { err.status = err.status || 500; return next(err); }
+};
 
-    res.status(200).json({
-      status_code: 200,
-      status_desc: 'tarjeta reportada correctamente'
+exports.actualizarLimite = async (req, res, next) => {
+  try {
+    const tarjeta_id   = toInt(req.params?.id);
+    const nuevo_limite = toNum(req.body?.nuevo_limite);
+
+    if (!Number.isInteger(tarjeta_id) || tarjeta_id <= 0) return res.fail(400, 'tarjeta_id inválido');
+    if (!Number.isFinite(nuevo_limite) || nuevo_limite <= 0) return res.fail(400, 'nuevo_limite debe ser > 0');
+
+    const actorRol = req.user?.rol || 'cliente';
+    const actorClienteId = req.user?.cliente_id ?? null;
+    const actorId = req.user?.id ?? req.user?.sub ?? null;
+
+    const { rows } = await model.actualizarLimiteTarjetaSP({
+      tarjeta_id, nuevo_limite, actorId, actorRol, actorClienteId
     });
+    const data = rows?.[0]?.data;
+    if (!data?.tarjeta_id) return res.fail(500, 'No se pudo actualizar el límite');
 
-  } catch (error){
-    res.status(500).json({
-      status_code: 500,
-      status_desc: 'Error al reportar la tarjeta',
-      error: error.message
-    });
-  }
+    logService.registrarLog({
+      usuario_id: actorId,
+      accion: LogActions.CARD_LIMIT_UPDATED,
+      descripcion: `Tarjeta ${tarjeta_id}: límite actualizado a ${nuevo_limite}`,
+      ip: req.ip,
+      user_agent: req.headers['user-agent']
+    }).catch(()=>{});
 
-}
+    return res.success(data);
+  } catch (err) { err.status = err.status || 500; return next(err); }
+};
+
+  

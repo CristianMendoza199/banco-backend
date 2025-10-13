@@ -11,7 +11,9 @@ const { allowRoles } =  require('../middlewares/roles');
 const {
      registrarTransaccion, 
      getHistorialConFiltros,
-     getEstadoCuentaPdf
+     getEstadoCuentaPdf,
+     depositar,
+     retirar
 
  } = require('../controllers/transaccionController');
 
@@ -19,7 +21,8 @@ const {
 router.post('/registrar', verifyToken, allowRoles('cliente'), registrarTransaccion);
 router.get('/transacciones', verifyToken, allowRoles('cliente'), getHistorialConFiltros);
 router.get('/estado-cuenta/pdf', verifyToken, allowRoles('cliente'), getEstadoCuentaPdf);
-
+router.post('/depositar', verifyToken, allowRoles('cliente'), depositar);
+router.post('/retirar', verifyToken, allowRoles('cliente'), retirar);
 // Exportamos el router para conectarlo en app.js
 module.exports = router;
 
