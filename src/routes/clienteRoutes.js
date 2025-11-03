@@ -6,17 +6,16 @@ const { allowRoles } = require('../middlewares/roles');
 
 //const { obtenerTarjetasPorCliente } = require('../controllers/tarjetaController');
 //const { registrarTransaccion } = require('../controllers/transaccionController');
-const {
-  obtenerClientes,
-  crearCliente,
-  actualizarCliente,
-  eliminarCliente
-} = require('../controllers/clienteController');
+const clienteController = require('../controllers/clienteController');
 
 
-router.get('/', verifyToken, allowRoles('admin'), obtenerClientes);
-router.post('/crear', verifyToken, allowRoles('admin'), crearCliente);
-router.put('/actualizar/:id', verifyToken, allowRoles('admin'), actualizarCliente);
-router.delete('/borrar/:id', verifyToken, allowRoles('admin'), eliminarCliente);
+router.get('/', verifyToken, allowRoles('admin'),
+clienteController.obtenerClientes);
+router.post('/crear', verifyToken, allowRoles('admin'),
+clienteController.crearCliente);
+router.put('/actualizar/:id', verifyToken, allowRoles('admin'), 
+clienteController.actualizarCliente);
+router.delete('/eliminar/:id', verifyToken, allowRoles('admin'),
+clienteController.eliminarCliente);
 
 module.exports = router;

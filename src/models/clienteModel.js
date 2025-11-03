@@ -1,38 +1,42 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
-const pool = new Pool({
+const db   = new Pool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
-});
+}); 
 
-// GET
-async function obtenerClientes() {
-  return await pool.query('SELECT * FROM obtener_clientes()');
+  // GET
+  function obtenerClientes({ busqueda = null } = {}) {
+  const sql = 'SELECT sp_clientes_listar($1) AS data';
+  return db.query(sql, [busqueda]);
 }
 
 // POST
-async function crearCliente({ nombre, email, telefono, direccion }) {
-  return await pool.query('SELECT * FROM insertar_cliente($1, $2, $3, $4)', [nombre, email, telefono, direccion]);
+function crearCliente({ nombre, email, telefono = null, direccion = null }) {
+  const sql = 'SELECT sp_cliente_crear($1,$2,$3,$4) AS data';
+  return db.query(sql, [nombre, email, telefono, direccion]);
 }
-
 // PUT
-async function editarCliente({ id, nombre, email, telefono, direccion }) {
-  return await pool.query('SELECT * FROM actualizar_cliente($1, $2, $3, $4, $5)', [id, nombre, email, telefono, direccion]);
+function actualizarCliente({ id, nombre = null, email = null, telefono = null, direccion = null }) {
+  const sql = 'SELECT sp_cliente_actualizar($1,$2,$3,$4,$5) AS data';
+  return db.query(sql, [id, nombre, email, telefono, direccion]);
 }
 
 // DELETE
-async function eliminarCliente(id) {
-  return await pool.query('SELECT * FROM eliminar_cliente($1)', [id]);
+function eliminarCliente(id) {
+  const sql = 'SELECT sp_cliente_eliminar($1) AS data';
+  return db.query(sql, [id]);
 }
+
 
 module.exports = {
   obtenerClientes,
   crearCliente,
-  editarCliente,
+  actualizarCliente,
   eliminarCliente
 };
 

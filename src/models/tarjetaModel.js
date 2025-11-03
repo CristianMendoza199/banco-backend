@@ -1,51 +1,33 @@
-const pool = require("../config/db");
+const db = require('../config/db');
 
 function crearTarjetaSP({ cuenta_id, tipo, limite_credito = null, actorRol, actorClienteId }) {
   const sql = 'SELECT sp_tarjeta_crear($1,$2,$3,$4,$5) AS data';
   return db.query(sql, [cuenta_id, tipo, limite_credito, actorRol, actorClienteId]);
 }
 
-/**
- * Cambiar estado de tarjeta.
- * Estados: 'ACTIVA'|'BLOQUEADA'|'REPORTADA'|'CANCELADA'
- * Params: { tarjeta_id, nuevo_estado, motivo?, actorId, actorRol, actorClienteId }
- */
+
 function cambiarEstadoTarjetaSP({ tarjeta_id, nuevo_estado, motivo = null, actorId, actorRol, actorClienteId }) {
   const sql = 'SELECT sp_tarjeta_cambiar_estado($1,$2,$3,$4,$5,$6) AS data';
   return db.query(sql, [tarjeta_id, nuevo_estado, motivo, actorId, actorRol, actorClienteId]);
 }
 
-/**
- * Reportar tarjeta (convenience de cambiar estado a REPORTADA).
- * Params: { tarjeta_id, motivo, actorId, actorRol, actorClienteId }
- */
+
 function reportarTarjetaSP({ tarjeta_id, motivo, actorId, actorRol, actorClienteId }) {
   const sql = 'SELECT sp_tarjeta_reportar($1,$2,$3,$4,$5) AS data';
   return db.query(sql, [tarjeta_id, motivo, actorId, actorRol, actorClienteId]);
 }
 
-/**
- * Detalle de tarjeta (header + crédito + últimos eventos).
- * Params: { tarjeta_id, actorRol, actorClienteId }
- */
+
 function detalleTarjetaSP({ tarjeta_id, actorRol, actorClienteId }) {
   const sql = 'SELECT sp_tarjeta_detalle($1,$2,$3) AS data';
   return db.query(sql, [tarjeta_id, actorRol, actorClienteId]);
 }
 
-/**
- * Listar tarjetas por cuenta con paginación.
- * Params: { cuenta_id, limit=50, offset=0 }
- */
 function listarTarjetasPorCuentaSP({ cuenta_id, limit = 50, offset = 0 }) {
   const sql = 'SELECT sp_tarjetas_listar_por_cuenta($1,$2,$3) AS data';
   return db.query(sql, [cuenta_id, limit, offset]);
 }
 
-/**
- * Actualizar límite de tarjeta de crédito (ajusta disponible por la diferencia).
- * Params: { tarjeta_id, nuevo_limite, actorId, actorRol, actorClienteId }
- */
 function actualizarLimiteTarjetaSP({ tarjeta_id, nuevo_limite, actorId, actorRol, actorClienteId }) {
   const sql = 'SELECT sp_tarjeta_actualizar_limite($1,$2,$3,$4,$5) AS data';
   return db.query(sql, [tarjeta_id, nuevo_limite, actorId, actorRol, actorClienteId]);

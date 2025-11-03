@@ -1,4 +1,4 @@
-
+ 
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -12,15 +12,12 @@ const errorHandler = require('./middlewares/errorHandler');
 
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(helmet());
-app.use(cors({ origin: true, Credentials: true}));
 app.use(express.json());
-
 
 app.use(requestId());
 app.use(responseFormat());
-
 // Rutas
 const clienteRoutes = require('./routes/clienteRoutes');
 app.use('/api/clientes', clienteRoutes);

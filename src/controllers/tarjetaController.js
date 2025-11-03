@@ -1,4 +1,3 @@
-const pool = require('../config/db');
 const model = require('../models/tarjetaModel');
 const { registrarLog } = ('../services/logService');
 const LogActions = require('../constants/logAction');

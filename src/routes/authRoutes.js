@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
-const { verify } = require('jsonwebtoken');
 const { verifyToken, verifyRole } = require('../middlewares/verifyToken')
 const { allowRoles } = require('../middlewares/roles');
 
@@ -11,8 +10,15 @@ router.post('/register', authController.register);
 
 // POST /api/auth/login
 router.post('/login', authController.login);
-router.post('/recuperar', verifyToken, allowRoles('cliente'), authController.changePassword);
-router.post('/solicitar-new-password',verifyToken, verifyRole('cliente'), authController.forgotPassword);
-router.post('/reset-password',verifyToken, allowRoles('cliente'), authController.resetPassword);
 
-module.exports = router;
+router.put('/change-password', verifyToken, allowRoles('cliente', 'admin'), 
+authController.changePassword);
+
+router.post('/solicitar-new-password',verifyToken, verifyRole('cliente'), 
+authController.forgotPassword);
+
+router.post('/reset-password',verifyToken, allowRoles('cliente'),
+ authController.resetPasswordConfirm);
+
+
+module.exports = router;    

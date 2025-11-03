@@ -1,8 +1,13 @@
-const pool = require('../config/db');
+const db = require('../config/db');
 
 async function registrarUsuarioSP({ email, passwordHash }) {
   const sql = 'SELECT sp_usuario_registrar($1,$2) AS data';
   return db.query(sql, [email, passwordHash]); // el controller lee rows?.[0]?.data
+}
+
+async function loginLookupByEmail(email) {
+  const sql = 'SELECT sp_usuario_login_get($1) AS data';
+  return db.query(sql, [email]);
 }
 
 
@@ -11,33 +16,38 @@ async function obtenerUsuarioPorEmail(email) {
   return db.query(sql, [email]);
 }
 
-async function createUsuario({ email, passwordHash, rol = 'cliente', cliente_id = null }) {
-    const  sql = 'SELECT sp_usuario_crear($1,$2,$3,$4) AS data';
-    return db.query(sql,[email, passwordHash, rol, cliente_id]);
+async function createUsuario({ email, passwordHash, rol = 'cliente', cliente_id = null, actor_rol = null, actor_cliente_id = null }) {
+  const sql = 'SELECT sp_usuario_crear($1,$2,$3,$4,$5,$6) AS data';
+  return db.query(sql, [email, passwordHash, rol, cliente_id, actor_rol, actor_cliente_id]);
 }
 
 
-async function obtenerUsuarios({ estado = 'ACTIVO', limit = 100, offset = 0 } = {} ) {
-  const sql = `SELECT sp_obtener_usuarios($1, $2, $3) AS data`;
-    return await db.query(sql, [estado, limit, offset]);
+async function obtenerUsuarios({ rol = null, cliente_id = null, estado = null, limit = 50, offset = 0 } = {}) {
+  const sql = `SELECT sp_obtener_usuarios($1,$2,$3,$4,$5) AS data`;
+  return db.query(sql, [rol, cliente_id, estado, limit, offset]);
 }
 
-
-async function obtenerUsuarioPorId(id) {
-  const sql = `SELECT  sp_obtener_usuarios($1) AS data`;
+async function obtenerUsuarioPorId({id}) {
+  const sql = `SELECT  sp_usuario_por_id($1) AS data`;
   return await db.query(sql,[id]);
 }
 
 
-async function updateUsuario(id, { email, rol, cliente_id }) {
-    const sql  = 'SELECT sp_usuario_actualizar($1, $2, $3, $4) AS data';
-    return db.query(sql,[id, email, rol, cliente_id]);
+async function updateUsuario(id, { email, rol, cliente_id } = {}) {
+  const sql = 'SELECT sp_usuario_actualizar($1,$2,$3,$4) AS data';
+  return db.query(sql, [
+    id,
+    email ?? null,
+    rol ?? null,
+    cliente_id ?? null
+  ]);
 }
 
-async function eliminarUsuario(id) {
-  const sql = 'SELECT sp_usuario_eliminar($1)  AS data';
-  return await db.query(sql,[id]);
+async function eliminarUsuario({ id, actor_id, force = false }) {
+  const sql = 'SELECT sp_usuario_eliminar($1, $2, $3) AS data';
+  return db.query(sql, [id, actor_id, force]);
 }
+
 
 async function obtenerPasswordHashSP({ id }) {
   const sql = 'SELECT sp_usuario_obtener_hash($1) AS data';
@@ -59,6 +69,12 @@ async function confirmarResetPasswordSP({ token, newHash, ip, ua }) {
   return db.query(sql, [token, newHash, ip, ua]); // { ok: true }
 }
 
+
+async function crearAdminBootstrap({ email, passwordHash }) {
+  const sql = 'SELECT sp_bootstrap_admin_crear($1,$2) AS data';
+  return db.query(sql, [email, passwordHash]);
+}
+
 module.exports = {
   obtenerUsuarioPorEmail,
   createUsuario,
@@ -70,5 +86,7 @@ module.exports = {
   obtenerPasswordHashSP,
   actualizarPasswordSP,
   solicitarResetPasswordSP,
-  confirmarResetPasswordSP
+  confirmarResetPasswordSP,
+  crearAdminBootstrap,
+  loginLookupByEmail
 };

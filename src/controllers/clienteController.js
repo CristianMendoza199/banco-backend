@@ -1,14 +1,21 @@
 const LogActions = require("../constants/logAction");
 const logService = require("../services/logService");
 const model = require("../models/clienteModel");
+const { toInt, toStr } = require('../utils/casters');
 
 // GET
 exports.obtenerClientes = async (req, res, next) => {
   try {
-    const { rows } = await model.obtenerClientes();
-    return res.success(rows);
+    // (opcional) sólo admin lista clientes; si quieres permitir cliente, valida rol aquí
+    if (req.user?.rol !== 'admin') return res.fail(403, 'No autorizado');
+
+    const busqueda = toStr(req.query?.busqueda || '', { trim: true }) || null;
+    const { rows } = await model.obtenerClientes({ busqueda });
+    const data = rows?.[0]?.data ?? [];
+
+    return res.success(data);
   } catch (error) {
-    console.status = 500;
+    error.status = error.status || 500;
     return next(error);
   }
 };
@@ -16,93 +23,136 @@ exports.obtenerClientes = async (req, res, next) => {
 // POST /clientes
 exports.crearCliente = async (req, res, next) => {
   try {
-    // valida lo básico; ajusta campos a tu esquema real
-    const { nombre, email, telefono, direccion } = req.body || {};
-    if (!nombre || !email) return res.fail(400, "faltan campos: nombre, email");
+    if (req.user?.rol !== 'admin') return res.fail(403, 'No autorizado');
 
-    const result = await model.crearCliente({
-      nombre,
-      email,
-      telefono,
-      direccion,
-    });
-    const cliente = result.rows?.[0];
+    const nombre    = toStr(req.body?.nombre);
+    const email     = toStr(req.body?.email, { lower: true });
+    const telefono  = toStr(req.body?.telefono);
+    const direccion = toStr(req.body?.direccion);
 
-    await logService.registrarLog({
+    if (!nombre || !email) return res.fail(400, 'faltan campos: nombre, email');
+
+    const { rows } = await model.crearCliente({ nombre, email, telefono: telefono || null, direccion: direccion || null });
+    const cliente = rows?.[0]?.data;
+    if (!cliente) return res.fail(500, 'No se pudo crear el cliente');
+
+    await logService?.registrarLog?.({
       usuario_id: req.user?.id ?? req.user?.sub ?? null,
       accion: LogActions.CLIENTE_CREADO,
-      descripcion: `Cliente creado correctamente (id: ${cliente?.id ?? "N/A"})`,
+      descripcion: `Cliente creado (id: ${cliente.id}, email: ${cliente.email})`,
       ip: req.ip,
-      user_agent: req.headers["user-agent"],
+      user_agent: req.headers['user-agent'],
     });
 
     return res.status(201).success(cliente);
   } catch (error) {
-    error.status = 500;
+    // PG unique_violation -> 23505
+     console.error('crearCliente error:', { code: error.code, message: error.message, detail: error.detail });
+    if (error.code === '23505') return res.fail(409, 'El email ya está registrado');
+    if (error.code === '23505') return res.fail(409, 'El email de cliente ya existe');
+    error.status = error.status || 500;
+
     return next(error);
   }
 };
 
-// PUT
+exports.crearCliente = async (req, res, next) => {
+  try {
+    if (req.user?.rol !== 'admin') return res.fail(403, 'No autorizado');
+
+    const nombre    = toStr(req.body?.nombre);
+    const email     = toStr(req.body?.email, { lower: true });
+    const telefono  = toStr(req.body?.telefono);
+    const direccion = toStr(req.body?.direccion);
+
+    if (!nombre || !email) return res.fail(400, 'faltan campos: nombre, email');
+
+    const { rows } = await model.crearCliente({ nombre, email, telefono: telefono || null, direccion: direccion || null });
+    const cliente = rows?.[0]?.data;
+    if (!cliente) return res.fail(500, 'No se pudo crear el cliente');
+
+    await logService?.registrarLog?.({
+      usuario_id: req.user?.id ?? req.user?.sub ?? null,
+      accion: LogActions.CLIENTE_CREADO,
+      descripcion: `Cliente creado (id: ${cliente.id}, email: ${cliente.email})`,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+
+    return res.status(201).success(cliente);
+  } catch (error) {
+    // PG unique_violation -> 23505
+    if (error.code === '23505') return res.fail(409, 'El email de cliente ya existe');
+    error.status = error.status || 500;
+    return next(error);
+  }
+};
+
+
+
 exports.actualizarCliente = async (req, res, next) => {
   try {
-    const { id } = req.params || {};
-    if (!id) return res.fail(400, "faltan campos: id");
+    if (req.user?.rol !== 'admin') return res.fail(403, 'No autorizado');
 
-    const { nombre, email, telefono, direccion } = req.body || {};
-    if (!nombre && !email && !telefono && !direccion) {
-      return res.fail(400, "debes enviar al menos un campo para actualizar");
+    console.log('params:', req.params, 'body.id:', req.body?.id);
+    const id = toInt(req.params?.id);
+    if (!Number.isInteger(id) || id <= 0) return res.fail(400, 'id inválido');
+
+    const nombre    = req.body?.nombre    !== undefined ? toStr(req.body.nombre) : null;
+    const email     = req.body?.email     !== undefined ? toStr(req.body.email, { lower: true }) : null;
+    const telefono  = req.body?.telefono  !== undefined ? toStr(req.body.telefono) : null;
+    const direccion = req.body?.direccion !== undefined ? toStr(req.body.direccion) : null;
+
+    if (nombre === null && email === null && telefono === null && direccion === null) {
+      return res.fail(400, 'debes enviar al menos un campo para actualizar');
     }
 
-    const result = await model.editarCliente({
-      id,
-      nombre,
-      email,
-      telefono,
-      direccion,
-    });
-    const cliente_actualizado = result.rows?.[0];
+    const { rows } = await model.actualizarCliente({ id, nombre, email, telefono, direccion });
+    const cliente = rows?.[0]?.data;  
+    if (!cliente) return res.fail(404, 'Cliente no encontrado');
 
-    if (!cliente_actualizado) return res.fail(404, "Cliente no encontrado");
-
-    await logService.registrarLog({
+    await logService?.registrarLog?.({
       usuario_id: req.user?.id ?? req.user?.sub ?? null,
       accion: LogActions.CLIENTE_ACTUALIZADO,
-      descripcion: `Cliente ID ${id} actualizado por usuario ${
-        req.user?.id ?? req.user?.sub ?? "N/A"
-      }`,
+      descripcion: `Cliente ID ${id} actualizado`,
       ip: req.ip,
-      user_agent: req.headers["user-agent"],
+      user_agent: req.headers['user-agent'],
     });
 
-    return res.success(cliente_actualizado);
+    return res.success(cliente);
   } catch (error) {
-    error.status = 500;
+    if (error.code === '23505') return res.fail(409, 'El email de cliente ya existe');
+    error.status = error.status || 500;
     return next(error);
   }
 };
+
+
 // DELETE
 exports.eliminarCliente = async (req, res, next) => {
   try {
-    const { id } = req.params || {};
-    if (!id) return res.fail(400, "faltan campos: id");
+    if (req.user?.rol !== 'admin') return res.fail(403, 'No autorizado');
 
-    const result = await model.eliminarCliente(id);
-    // muchos modelos devuelven rowCount en deletes; ajusta si tu modelo retorna rows[0]
-    if (!result.rowCount) return res.fail(404, "Cliente no encontrado");
+    const id = toInt(req.params?.id);
+    if (!Number.isInteger(id) || id <= 0) return res.fail(400, 'id inválido');
 
-    await logService.registrarLog({
+    const { rows } = await model.eliminarCliente(id);
+    const resp = rows?.[0]?.data; // {'deleted':true,'id':...} o NULL
+    if (!resp) return res.fail(404, 'Cliente no encontrado');
+
+    await logService?.registrarLog?.({
       usuario_id: req.user?.id ?? req.user?.sub ?? null,
       accion: LogActions.CLIENTE_ELIMINADO,
       descripcion: `Cliente ID ${id} eliminado`,
       ip: req.ip,
-      user_agent: req.headers["user-agent"],
+      user_agent: req.headers['user-agent'],
     });
 
-    // Puedes retornar 204 sin body, o confirmación explícita
-    return res.success({ deleted: true, id });
+    return res.success(resp);
   } catch (error) {
-    error.status = 500;
+    // Si hay FKs (users/cuentas), PG tirará 23503 → mapear a 409
+    if (error.code === '23503') return res.fail(409, 'No se puede eliminar: cliente con relaciones');
+    error.status = error.status || 500;
     return next(error);
   }
 };
